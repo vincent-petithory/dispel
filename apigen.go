@@ -5,10 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"go/ast"
 	"go/format"
-	"go/parser"
-	"go/token"
 	"io/ioutil"
 	"log"
 	"os"
@@ -46,17 +43,6 @@ var (
 	genType        string
 	noGofmt        bool
 )
-
-// walker adapts a function to satisfy the ast.Visitor interface.
-// The function return whether the walk should proceed into the node's children.
-type walker func(ast.Node) bool
-
-func (w walker) Visit(node ast.Node) ast.Visitor {
-	if w(node) {
-		return w
-	}
-	return nil
-}
 
 func main() {
 	flag.Parse()
@@ -111,44 +97,9 @@ func main() {
 	}
 	_ = f.Close()
 
-	// Analyse AST of handler package, look for *Handler methods.
-	// However, we exclude the ones we generated previously.
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, filepath.Dir(goFileName), func(fi os.FileInfo) bool {
-		return fi.Name() != genFileName
-	}, parser.ParseComments)
+	handlerFuncDecls, err := findTypesFuncs(filepath.Dir(goFileName), goPkgName, []string{"Handler"}, []string{genFileName})
 	if err != nil {
 		log.Fatal(err)
-	}
-	handlerPkg, ok := pkgs["handler"]
-	if !ok {
-		log.Fatalf("%s: package not found in %q", "handler", filepath.Dir(goFileName))
-	}
-
-	handlerFuncNames := make([]string, 0, 200)
-	for _, astFile := range handlerPkg.Files {
-		ast.Walk(walker(func(node ast.Node) bool {
-			switch v := node.(type) {
-			case *ast.FuncDecl:
-				if v.Recv != nil {
-					// this is a method, find the type of the receiver
-					field := v.Recv.List[0]
-					se, ok := field.Type.(*ast.StarExpr)
-					if !ok {
-						return true
-					}
-					ident, ok := se.X.(*ast.Ident)
-					if !ok {
-						return true
-					}
-					if ident.Name != "Handler" {
-						return true
-					}
-					handlerFuncNames = append(handlerFuncNames, v.Name.String())
-				}
-			}
-			return true
-		}), astFile)
 	}
 
 	// Compile template
@@ -159,7 +110,7 @@ func main() {
 			return afterRuneUpper(s, ".- ")
 		},
 		"handlerFuncMissing": func(s string) bool {
-			for _, handlerFuncName := range handlerFuncNames {
+			for handlerFuncName := range handlerFuncDecls {
 				if s == handlerFuncName {
 					return false
 				}
