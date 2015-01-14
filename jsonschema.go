@@ -12,7 +12,7 @@ import (
 	"unicode/utf8"
 )
 
-// Schema represents a JSON Schema.
+// Schema represents a JSON Hyper Schema.
 type Schema struct {
 	ID          string `json:"id,omitempty"`
 	Title       string `json:"title,omitempty"`
@@ -31,19 +31,16 @@ type Schema struct {
 
 	Definitions map[string]*Schema `json:"definitions,omitempty"`
 
-	// Numbers
 	MultipleOf       float64 `json:"multipleOf,omitempty"`
 	Maximum          float64 `json:"maximum,omitempty"`
 	ExclusiveMaximum bool    `json:"exclusiveMaximum,omitempty"`
 	Minimum          float64 `json:"minimum,omitempty"`
 	ExclusiveMinimum bool    `json:"exclusiveMinimum,omitempty"`
 
-	// Strings
 	MinLength int    `json:"minLength,omitempty"`
 	MaxLength int    `json:"maxLength,omitempty"`
 	Pattern   string `json:"pattern,omitempty"`
 
-	// Objects
 	MinProperties        int                    `json:"minProperties,omitempty"`
 	MaxProperties        int                    `json:"maxProperties,omitempty"`
 	Required             []string               `json:"required,omitempty"`
@@ -52,23 +49,19 @@ type Schema struct {
 	AdditionalProperties interface{}            `json:"additionalProperties,omitempty"`
 	PatternProperties    map[string]*Schema     `json:"patternProperties,omitempty"`
 
-	// Arrays
 	Items           *Schema     `json:"items,omitempty"`
 	MinItems        int         `json:"minItems,omitempty"`
 	MaxItems        int         `json:"maxItems,omitempty"`
 	UniqueItems     bool        `json:"uniqueItems,omitempty"`
 	AdditionalItems interface{} `json:"additionalItems,omitempty"`
 
-	// All
 	Enum []string `json:"enum,omitempty"`
 
-	// Schemas
 	OneOf []Schema `json:"oneOf,omitempty"`
 	AnyOf []Schema `json:"anyOf,omitempty"`
 	AllOf []Schema `json:"allOf,omitempty"`
 	Not   *Schema  `json:"not,omitempty"`
 
-	// Links
 	Links []Link `json:"links,omitempty"`
 }
 
@@ -85,58 +78,55 @@ type Link struct {
 	MediaType    string  `json:"mediaType,omitempty"`
 }
 
+// Route represents an HTTP endpoint for a resource, with JSON on the wire.
 type Route struct {
 	Path        string
 	Name        string
 	RouteParams []RouteParam
 	Method      string
-	InType      JSONType
-	OutType     JSONType
+	RouteIO
 }
 
+// RouteIO represents JSON types for input and output.
+type RouteIO struct {
+	// InType is the JSON type coming in.
+	InType JSONType
+	// InType is the JSON type coming out.
+	OutType JSONType
+}
+
+// RouteParam represents a variable chunk in an HTTP endpoint path.
 type RouteParam struct {
 	Name    string
 	Varname string
 }
 
+// Routes represents a list of Routes.
 type Routes []Route
 
-func (r Routes) Len() int           { return len(r) }
-func (r Routes) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r Routes) Less(i, j int) bool { return r[i].Path < r[j].Path }
+func (routes Routes) Len() int           { return len(routes) }
+func (routes Routes) Swap(i, j int)      { routes[i], routes[j] = routes[j], routes[i] }
+func (routes Routes) Less(i, j int) bool { return routes[i].Path < routes[j].Path }
 
-type ResourceRoute struct {
-	Path        string
-	Name        string
-	RouteParams []RouteParam
-	Methods     Methods
-}
-
-type ResourceRoutes []ResourceRoute
-
-func (r ResourceRoutes) Len() int           { return len(r) }
-func (r ResourceRoutes) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r ResourceRoutes) Less(i, j int) bool { return r[i].Path < r[j].Path }
-
+// ByResource map-reduces Routes to a ResourceRoutes.
 func (routes Routes) ByResource() ResourceRoutes {
 	resourceRouteMap := make(map[string]*ResourceRoute)
 	for _, route := range routes {
 		resourceRoute, ok := resourceRouteMap[route.Path]
 		if !ok {
 			resourceRoute = &ResourceRoute{
-				Path:        route.Path,
-				Name:        route.Name,
-				RouteParams: route.RouteParams,
-				Methods:     Methods{route.Method},
+				Path:             route.Path,
+				Name:             route.Name,
+				RouteParams:      route.RouteParams,
+				MethodRouteIOMap: MethodRouteIOMap{route.Method: route.RouteIO},
 			}
 			resourceRouteMap[route.Path] = resourceRoute
 			continue
 		}
-		resourceRoute.Methods = append(resourceRoute.Methods, route.Method)
+		resourceRoute.MethodRouteIOMap[route.Method] = route.RouteIO
 	}
 	resourceRoutes := make(ResourceRoutes, 0, len(resourceRouteMap))
 	for _, resourceRoute := range resourceRouteMap {
-		sort.Sort(resourceRoute.Methods)
 		resourceRoutes = append(resourceRoutes, *resourceRoute)
 	}
 	sort.Sort(resourceRoutes)
@@ -168,6 +158,10 @@ func (routes Routes) UniqueObjects() []JSONObject {
 	return jsonObjects
 }
 
+// MethodRouteIOMap maps a method to a RouteIO.
+type MethodRouteIOMap map[string]RouteIO
+
+// Methods is a list of HTTP methods.
 type Methods []string
 
 func (m Methods) Len() int      { return len(m) }
@@ -192,6 +186,31 @@ func (m Methods) Less(i, j int) bool {
 }
 
 var methodsOrder = []string{"GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+
+// ResourceRoute represents a set of routes related to a resource, in the scope of a RESTful design.
+type ResourceRoute struct {
+	Path             string
+	Name             string
+	RouteParams      []RouteParam
+	MethodRouteIOMap MethodRouteIOMap
+}
+
+// Methods lists the available HTTP methods on the resource.
+func (resourceRoutes *ResourceRoute) Methods() Methods {
+	var methods Methods
+	for method := range resourceRoutes.MethodRouteIOMap {
+		methods = append(methods, method)
+	}
+	sort.Sort(methods)
+	return methods
+}
+
+// ResourceRoutes is a list of resource routes.
+type ResourceRoutes []ResourceRoute
+
+func (r ResourceRoutes) Len() int           { return len(r) }
+func (r ResourceRoutes) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r ResourceRoutes) Less(i, j int) bool { return r[i].Name < r[j].Name }
 
 func routeParamsFromPath(s string) ([]RouteParam, error) {
 	var (
@@ -375,24 +394,24 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 			if err != nil {
 				return nil, err
 			}
-			if rp != nil {
-				route.RouteParams = rp
+			if rp == nil {
+				rp = make([]RouteParam, 0)
 			}
+			route.RouteParams = rp
 			if link.Schema != nil {
-				inType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%s", link.Rel, symbolName(propertyName)), link.Schema)
+				inType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sIn", link.Rel, symbolName(propertyName)), link.Schema)
 				if err != nil {
 					return nil, err
 				}
 				route.InType = inType
 			}
 			if link.TargetSchema != nil {
-				outType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%s", link.Rel, symbolName(propertyName)), link.TargetSchema)
+				outType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sOut", link.Rel, symbolName(propertyName)), link.TargetSchema)
 				if err != nil {
 					return nil, err
 				}
 				route.OutType = outType
 			}
-			route.RouteParams = make([]RouteParam, 0)
 			schemaRoutes = append(schemaRoutes, *route)
 		}
 	}
@@ -400,6 +419,8 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 	return schemaRoutes, nil
 }
 
+// ResolveSchema takes a schema and recursively follows its $ref, if any.
+// An error is returned if it fails to resolve a ref along the way.
 func (sp *SchemaParser) ResolveSchema(schema *Schema) (*Schema, error) {
 	var (
 		s   *Schema
@@ -414,6 +435,8 @@ func (sp *SchemaParser) ResolveSchema(schema *Schema) (*Schema, error) {
 	return s, nil
 }
 
+// ResolveSchemaRef takes an absolute $ref string and returns the pointed schema.
+// An error is returned if the ref is either not absolute, or it doesn't point to a schema.
 func (sp *SchemaParser) ResolveSchemaRef(schemaRef string) (*Schema, error) {
 	if !strings.HasPrefix(schemaRef, "#/") {
 		return nil, InvalidSchemaRefError{Ref: schemaRef, Msg: "ref is not absolute (missing leading #/)"}

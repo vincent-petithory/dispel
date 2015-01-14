@@ -2,9 +2,22 @@ package main
 
 import (
 	"encoding/json"
+	"os"
 	"sort"
 	"testing"
 )
+
+// getSchema opens a json schema, unmarshals it and returns it.
+// If an error occurs, the test which called getSchema will fail now.
+func getSchema(tb testing.TB, name string) *Schema {
+	var schema Schema
+	f, err := os.Open(name)
+	ok(tb, err)
+	defer f.Close()
+
+	ok(tb, json.NewDecoder(f).Decode(&schema))
+	return &schema
+}
 
 func TestParseSimpleJSONStruct(t *testing.T) {
 	schemaStr := `{
@@ -27,9 +40,7 @@ func TestParseSimpleJSONStruct(t *testing.T) {
     }
 }`
 	var schema Schema
-	if err := json.Unmarshal([]byte(schemaStr), &schema); err != nil {
-		t.Fatal(err)
-	}
+	ok(t, json.Unmarshal([]byte(schemaStr), &schema))
 
 	expectedObj := JSONObject{
 		Name: schema.Title,
@@ -95,9 +106,7 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
     }
 }`
 	var schema Schema
-	if err := json.Unmarshal([]byte(schemaStr), &schema); err != nil {
-		t.Fatal(err)
-	}
+	ok(t, json.Unmarshal([]byte(schemaStr), &schema))
 
 	spellSchema, exists := schema.Definitions["spell"]
 	assert(t, exists, "definition %q not found in schema", "spell")
@@ -119,85 +128,7 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
 }
 
 func TestParseSchemaWithRoutesOneResource(t *testing.T) {
-	schemaStr := `{
-    "$schema": "http://json-schema.org/draft-04/hyper-schema",
-    "title": "Test API",
-    "type": "object",
-    "definitions": {
-        "spell": {
-            "type": "object",
-            "definitions": {
-                "name": {
-                    "type": "string"
-                },
-                "element": {
-                    "type": "string"
-                },
-                "power": {
-                    "type": "integer"
-                },
-                "all": {
-                    "type": "boolean"
-                }
-            },
-            "links": [
-                {
-                    "title": "List",
-                    "href": "/spells",
-                    "method": "POST",
-                    "rel": "create",
-                    "schema": {
-                        "$ref": "#/definitions/spell"
-                    }
-                },
-                {
-                    "title": "List",
-                    "href": "/spells",
-                    "method": "GET",
-                    "rel": "list",
-                    "targetSchema": {
-                        "items": {
-                            "$ref": "#/definitions/spell"
-                        },
-                        "type": "array"
-                    }
-                },
-                {
-                    "title": "List",
-                    "href": "/spells/{(%23%2Fdefinitions%2Fspell%2Fdefinitions%2Fname)}",
-                    "method": "GET",
-                    "rel": "one",
-                    "targetSchema": {
-                        "$ref": "#/definitions/spell"
-                    }
-                }
-            ],
-            "properties": {
-                "name": {
-                    "$ref": "#/definitions/spell/definitions/name"
-                },
-                "element": {
-                    "$ref": "#/definitions/spell/definitions/element"
-                },
-                "power": {
-                    "$ref": "#/definitions/spell/definitions/power"
-                },
-                "all": {
-                    "$ref": "#/definitions/spell/definitions/all"
-                }
-            }
-        }
-    },
-    "properties": {
-        "spell": {
-            "$ref": "#/definitions/spell"
-        }
-    }
-}`
-	var schema Schema
-	if err := json.Unmarshal([]byte(schemaStr), &schema); err != nil {
-		t.Fatal(err)
-	}
+	schema := getSchema(t, "spells.json")
 
 	expectedRoutes := Routes{
 		{
@@ -205,24 +136,18 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			Name:        "spells",
 			RouteParams: []RouteParam{},
 			Method:      "POST",
-			InType: JSONObject{
-				Name: "createSpell",
-				Fields: JSONFieldList{ // .Name natural sort
-					{Name: "all", Type: JSONBasicType("boolean")},
-					{Name: "element", Type: JSONBasicType("string")},
-					{Name: "name", Type: JSONBasicType("string")},
-					{Name: "power", Type: JSONBasicType("integer")},
+			RouteIO: RouteIO{
+				InType: JSONObject{
+					Name: "createSpellIn",
+					Fields: JSONFieldList{ // .Name natural sort
+						{Name: "all", Type: JSONBasicType("boolean")},
+						{Name: "element", Type: JSONBasicType("string")},
+						{Name: "name", Type: JSONBasicType("string")},
+						{Name: "power", Type: JSONBasicType("integer")},
+					},
 				},
-			},
-		},
-		{
-			Path:        "/spells",
-			Name:        "spells",
-			RouteParams: []RouteParam{},
-			Method:      "GET",
-			OutType: JSONArray{
-				Items: JSONObject{
-					Name: "",
+				OutType: JSONObject{
+					Name: "createSpellOut",
 					Fields: JSONFieldList{ // .Name natural sort
 						{Name: "all", Type: JSONBasicType("boolean")},
 						{Name: "element", Type: JSONBasicType("string")},
@@ -233,25 +158,180 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			},
 		},
 		{
-			Path:        "/spells/{spell-name}",
-			Name:        "spells.one",
+			Path:        "/spells",
+			Name:        "spells",
 			RouteParams: []RouteParam{},
 			Method:      "GET",
-			OutType: JSONObject{
-				Name: "oneSpell",
-				Fields: JSONFieldList{ // .Name natural sort
-					{Name: "all", Type: JSONBasicType("boolean")},
-					{Name: "element", Type: JSONBasicType("string")},
-					{Name: "name", Type: JSONBasicType("string")},
-					{Name: "power", Type: JSONBasicType("integer")},
+			RouteIO: RouteIO{
+				OutType: JSONArray{
+					Items: JSONObject{
+						Name: "",
+						Fields: JSONFieldList{ // .Name natural sort
+							{Name: "all", Type: JSONBasicType("boolean")},
+							{Name: "element", Type: JSONBasicType("string")},
+							{Name: "name", Type: JSONBasicType("string")},
+							{Name: "power", Type: JSONBasicType("integer")},
+						},
+					},
+				},
+			},
+		},
+		{
+			Path: "/spells/{spell-name}",
+			Name: "spells.one",
+			RouteParams: []RouteParam{
+				{Name: "spell-name", Varname: "spellName"},
+			},
+			Method: "GET",
+			RouteIO: RouteIO{
+				OutType: JSONObject{
+					Name: "oneSpellOut",
+					Fields: JSONFieldList{ // .Name natural sort
+						{Name: "all", Type: JSONBasicType("boolean")},
+						{Name: "element", Type: JSONBasicType("string")},
+						{Name: "name", Type: JSONBasicType("string")},
+						{Name: "power", Type: JSONBasicType("integer")},
+					},
 				},
 			},
 		},
 	}
 	sort.Sort(expectedRoutes)
 
-	sp := SchemaParser{RootSchema: &schema}
+	sp := SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 	equals(t, expectedRoutes, routes)
+}
+
+func TestParseSchemaByResource(t *testing.T) {
+	schema := getSchema(t, "weapons-and-armors.json")
+	expectedResourceRoutes := ResourceRoutes{
+		{
+			Path:        "/armors",
+			Name:        "armors",
+			RouteParams: []RouteParam{},
+			MethodRouteIOMap: MethodRouteIOMap{
+				"POST": RouteIO{
+					InType: JSONObject{
+						Name: "createArmorIn",
+						Fields: JSONFieldList{ // .Name natural sort
+							{Name: "can_break", Type: JSONBasicType("boolean")},
+							{Name: "name", Type: JSONBasicType("string")},
+						},
+					},
+					OutType: JSONObject{
+						Name: "createArmorOut",
+						Fields: JSONFieldList{ // .Name natural sort
+							{Name: "can_break", Type: JSONBasicType("boolean")},
+							{Name: "id", Type: JSONBasicType("string")},
+							{Name: "name", Type: JSONBasicType("string")},
+						},
+					},
+				},
+				"GET": RouteIO{
+					OutType: JSONArray{
+						Items: JSONObject{
+							Name: "",
+							Fields: JSONFieldList{ // .Name natural sort
+								{Name: "can_break", Type: JSONBasicType("boolean")},
+								{Name: "id", Type: JSONBasicType("string")},
+								{Name: "name", Type: JSONBasicType("string")},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Path: "/armors/{armor-id}",
+			Name: "armors.one",
+			RouteParams: []RouteParam{
+				{Name: "armor-id", Varname: "armorId"},
+			},
+			MethodRouteIOMap: MethodRouteIOMap{
+				"GET": RouteIO{
+					OutType: JSONObject{
+						Name: "oneArmorOut",
+						Fields: JSONFieldList{ // .Name natural sort
+							{Name: "can_break", Type: JSONBasicType("boolean")},
+							{Name: "id", Type: JSONBasicType("string")},
+							{Name: "name", Type: JSONBasicType("string")},
+						},
+					},
+				},
+				"DELETE": RouteIO{
+					OutType: JSONObject{
+						Name: "deleteArmorOut",
+						Fields: JSONFieldList{ // .Name natural sort
+							{Name: "can_break", Type: JSONBasicType("boolean")},
+							{Name: "id", Type: JSONBasicType("string")},
+							{Name: "name", Type: JSONBasicType("string")},
+						},
+					},
+				},
+			},
+		},
+		{
+			Path:        "/weapons",
+			Name:        "weapons",
+			RouteParams: []RouteParam{},
+			MethodRouteIOMap: MethodRouteIOMap{
+				"POST": RouteIO{
+					InType: JSONObject{
+						Name: "createWeaponIn",
+						Fields: JSONFieldList{ // .Name natural sort
+							{Name: "damage", Type: JSONBasicType("integer")},
+							{Name: "name", Type: JSONBasicType("string")},
+						},
+					},
+					OutType: JSONObject{
+						Name: "createWeaponOut",
+						Fields: JSONFieldList{ // .Name natural sort
+							{Name: "damage", Type: JSONBasicType("integer")},
+							{Name: "id", Type: JSONBasicType("string")},
+							{Name: "name", Type: JSONBasicType("string")},
+						},
+					},
+				},
+				"GET": RouteIO{
+					OutType: JSONArray{
+						Items: JSONObject{
+							Name: "",
+							Fields: JSONFieldList{ // .Name natural sort
+								{Name: "damage", Type: JSONBasicType("integer")},
+								{Name: "id", Type: JSONBasicType("string")},
+								{Name: "name", Type: JSONBasicType("string")},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			Path: "/weapons/{weapon-id}",
+			Name: "weapons.one",
+			RouteParams: []RouteParam{
+				{Name: "weapon-id", Varname: "weaponId"},
+			},
+			MethodRouteIOMap: MethodRouteIOMap{
+				"GET": RouteIO{
+					OutType: JSONObject{
+						Name: "oneWeaponOut",
+						Fields: JSONFieldList{ // .Name natural sort
+							{Name: "damage", Type: JSONBasicType("integer")},
+							{Name: "id", Type: JSONBasicType("string")},
+							{Name: "name", Type: JSONBasicType("string")},
+						},
+					},
+				},
+			},
+		},
+	}
+	sort.Sort(expectedResourceRoutes)
+
+	sp := SchemaParser{RootSchema: schema}
+	routes, err := sp.ParseRoutes()
+	ok(t, err)
+	equals(t, expectedResourceRoutes, routes.ByResource())
 }

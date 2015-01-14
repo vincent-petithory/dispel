@@ -1,0 +1,78 @@
+{
+    "$schema": "http://json-schema.org/draft-04/hyper-schema",
+    "title": "Test API",
+    "type": "object",
+    "definitions": {
+        "spell": {
+            "type": "object",
+            "definitions": {
+                "name": {
+                    "type": "string"
+                },
+                "element": {
+                    "type": "string"
+                },
+                "power": {
+                    "type": "integer"
+                },
+                "all": {
+                    "type": "boolean"
+                }
+            },
+            "links": [
+                {
+                    "title": "Create a spell",
+                    "href": "/spells",
+                    "method": "POST",
+                    "rel": "create",
+                    "schema": {
+                        "$ref": "#/definitions/spell"
+                    },
+                    "targetSchema": {
+                        "$ref": "#/definitions/spell"
+                    }
+                },
+                {
+                    "title": "List spells",
+                    "href": "/spells",
+                    "method": "GET",
+                    "rel": "list",
+                    "targetSchema": {
+                        "items": {
+                            "$ref": "#/definitions/spell"
+                        },
+                        "type": "array"
+                    }
+                },
+                {
+                    "title": "Info for a spell",
+                    "href": "/spells/{(%23%2Fdefinitions%2Fspell%2Fdefinitions%2Fname)}",
+                    "method": "GET",
+                    "rel": "one",
+                    "targetSchema": {
+                        "$ref": "#/definitions/spell"
+                    }
+                }
+            ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/spell/definitions/name"
+                },
+                "element": {
+                    "$ref": "#/definitions/spell/definitions/element"
+                },
+                "power": {
+                    "$ref": "#/definitions/spell/definitions/power"
+                },
+                "all": {
+                    "$ref": "#/definitions/spell/definitions/all"
+                }
+            }
+        }
+    },
+    "properties": {
+        "spell": {
+            "$ref": "#/definitions/spell"
+        }
+    }
+}

@@ -1,0 +1,164 @@
+{
+    "$schema": "http://json-schema.org/draft-04/hyper-schema",
+    "title": "Test API",
+    "type": "object",
+    "definitions": {
+        "id": {
+            "type": "string"
+        },
+        "armor": {
+            "type": "object",
+            "definitions": {
+                "id": {
+                    "$ref": "#/definitions/id"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "canbreak": {
+                    "type": "boolean"
+                }
+            },
+            "links": [
+                {
+                    "title": "Create an armor",
+                    "href": "/armors",
+                    "method": "POST",
+                    "rel": "create",
+                    "schema": {
+                        "properties": {
+                            "name": {
+                                "$ref": "#/definitions/armor/definitions/name"
+                            },
+                            "can_break": {
+                                "$ref": "#/definitions/armor/definitions/canbreak"
+                            }
+                        }
+                    },
+                    "targetSchema": {
+                        "$ref": "#/definitions/armor"
+                    }
+                },
+                {
+                    "title": "List armors",
+                    "href": "/armors",
+                    "method": "GET",
+                    "rel": "list",
+                    "targetSchema": {
+                        "items": {
+                            "$ref": "#/definitions/armor"
+                        },
+                        "type": "array"
+                    }
+                },
+                {
+                    "title": "Deletes an existing armor",
+                    "href": "/armors/{(%23%2Fdefinitions%2Farmor%2Fdefinitions%2Fid)}",
+                    "method": "DELETE",
+                    "rel": "delete",
+                    "targetSchema": {
+                        "$ref": "#/definitions/armor"
+                    }
+                },
+                {
+                    "title": "Info for an armor",
+                    "href": "/armors/{(%23%2Fdefinitions%2Farmor%2Fdefinitions%2Fid)}",
+                    "method": "GET",
+                    "rel": "one",
+                    "targetSchema": {
+                        "$ref": "#/definitions/armor"
+                    }
+                }
+            ],
+            "properties": {
+                "id": {
+                    "$ref": "#/definitions/id"
+                },
+                "name": {
+                    "$ref": "#/definitions/armor/definitions/name"
+                },
+                "can_break": {
+                    "$ref": "#/definitions/armor/definitions/canbreak"
+                }
+            }
+        },
+        "weapon": {
+            "type": "object",
+            "definitions": {
+                "id": {
+                    "$ref": "#/definitions/id"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "damage": {
+                    "type": "integer"
+                }
+            },
+            "links": [
+                {
+                    "title": "Create a weapon",
+                    "href": "/weapons",
+                    "method": "POST",
+                    "rel": "create",
+                    "schema": {
+                        "properties": {
+                            "name": {
+                                "$ref": "#/definitions/weapon/definitions/name"
+                            },
+                            "damage": {
+                                "$ref": "#/definitions/weapon/definitions/damage"
+                            }
+                        }
+                    },
+                    "targetSchema": {
+                        "$ref": "#/definitions/weapon"
+                    }
+                },
+                {
+                    "title": "List weapons",
+                    "href": "/weapons",
+                    "method": "GET",
+                    "rel": "list",
+                    "targetSchema": {
+                        "items": {
+                            "$ref": "#/definitions/weapon"
+                        },
+                        "type": "array"
+                    }
+                },
+                {
+                    "title": "Info for a weapon",
+                    "href": "/weapons/{(%23%2Fdefinitions%2Fweapon%2Fdefinitions%2Fid)}",
+                    "method": "GET",
+                    "rel": "one",
+                    "targetSchema": {
+                        "$ref": "#/definitions/weapon"
+                    }
+                }
+            ],
+            "properties": {
+                "id": {
+                    "$ref": "#/definitions/id"
+                },
+                "name": {
+                    "$ref": "#/definitions/weapon/definitions/name"
+                },
+		"damage": {
+		    "$ref": "#/definitions/weapon/definitions/damage"
+		}
+            }
+        }
+    },
+    "properties": {
+        "armor": {
+            "$ref": "#/definitions/armor"
+        },
+        "weapon": {
+            "$ref": "#/definitions/weapon"
+        },
+        "id": {
+            "$ref": "#/definitions/id"
+        }
+    }
+}
