@@ -8,12 +8,12 @@ import (
 
 // setupRoutes registers the url path and name of all routes of the API.
 func (r *Routes) setupRoutes() {
-{{ range .Routes }}	r.r.Path("{{ .Path }}").Name("{{ .Name }}")
+{{ range .Routes.ByResource }}	r.r.Path("{{ .Path }}").Name("{{ .Name }}")
 {{end}}}
 
 // URL builders
 
-{{ range .Routes }}func (r *Routes) {{ .FuncBaseName | capitalize }}({{ range .RouteParams }}{{ .Varname }} string,{{end}}) *url.URL {
+{{ range .Routes.ByResource }}func (r *Routes) {{ .Name | symbolName }}({{ range .RouteParams }}{{ .Varname }} string,{{end}}) *url.URL {
 	return r.routeURL("{{ .Name }}", {{ range .RouteParams }}"{{ .Name }}", {{ .Varname }},{{end}})
 }
 {{end}}

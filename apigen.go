@@ -28,10 +28,12 @@ func init() {
 //go:generate asset --var=routesTmpl routes.go.tmpl
 //go:generate asset --var=handlersTmpl handlers.go.tmpl
 //go:generate asset --var=handlerfuncsTmpl handlerfuncs.go.tmpl
+//go:generate asset --var=typesTmpl types.go.tmpl
 var genTypes = map[string]string{
 	"routes":       routesTmpl,
 	"handlers":     handlersTmpl,
 	"handlerfuncs": handlerfuncsTmpl,
+	"types":        typesTmpl,
 }
 
 func tmpl(a asset) string {
@@ -97,6 +99,8 @@ func main() {
 	}
 	_ = f.Close()
 
+	schemaParser := SchemaParser{RootSchema: &schema}
+
 	handlerFuncDecls, err := findTypesFuncs(filepath.Dir(goFileName), goPkgName, []string{"Handler"}, []string{genFileName})
 	if err != nil {
 		log.Fatal(err)
@@ -107,7 +111,7 @@ func main() {
 		"tolower":    strings.ToLower,
 		"capitalize": capitalize,
 		"symbolName": func(s string) string {
-			return afterRuneUpper(s, ".- ")
+			return capitalize(afterRuneUpper(s, ".- "))
 		},
 		"handlerFuncMissing": func(s string) bool {
 			for handlerFuncName := range handlerFuncDecls {
@@ -127,16 +131,26 @@ func main() {
 		}
 	}
 
+	routes, err := schemaParser.ParseRoutes()
+	if err != nil {
+		switch t := err.(type) {
+		case InvalidSchemaError:
+			log.Fatalf("Schema: %#v\nMsg: %s", t.Schema, t.Msg)
+		default:
+			log.Fatal(err)
+		}
+	}
+
 	// Prepare context for template
 	// Note: we use the same context for all types of templates
 	ctx := struct {
 		Prgm    string
 		PkgName string
-		Routes  routes
+		Routes  Routes
 	}{
 		Prgm:    strings.Join(append([]string{prgmName}, os.Args[1:]...), " "),
 		PkgName: goPkgName,
-		Routes:  parseRoutes(schema),
+		Routes:  routes,
 	}
 
 	// Exec template

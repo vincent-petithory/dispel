@@ -8,13 +8,13 @@ import (
 
 // registerAPIHandlers registers resource handlers for each unique named route of the API.
 func (h *Handler) registerAPIHandlers() {
-{{ range .Routes }}	h.Routes.r.Get("{{ .Name }}").Handler(&MethodHandler{
+{{ range .Routes.ByResource }}	h.Routes.r.Get("{{ .Name }}").Handler(&MethodHandler{
 {{ $route := . }}{{ range .Methods }}	{{ . | tolower | capitalize }}: endpointHandler(func(w http.ResponseWriter, r *http.Request) *endpointError {
         {{ range $route.RouteParams }}{{ .Varname }}, err := h.getUID(w, r, "{{ .Name }}")
 	if err != nil {
 		return newEndpointError(err, http.StatusBadRequest)
 	}
-	{{end}}	return h.{{ . | tolower }}{{ $route.FuncBaseName }}(w, r{{ range $route.RouteParams }},{{ .Varname }}{{end}})
+	{{end}}	return h.{{ . | tolower }}{{ $route.Name | symbolName }}(w, r{{ range $route.RouteParams }},{{ .Varname }}{{end}})
 }),
 {{end}}
 })
