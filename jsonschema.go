@@ -99,6 +99,7 @@ type RouteIO struct {
 type RouteParam struct {
 	Name    string
 	Varname string
+	Type    JSONType
 }
 
 // Routes represents a list of Routes.
@@ -231,6 +232,7 @@ func routeParamsFromPath(s string) ([]RouteParam, error) {
 			routeParams = append(routeParams, RouteParam{
 				Name:    varbuf.String(),
 				Varname: strings.Replace(afterRuneUpper(varbuf.String(), "-"), "Uid", "UID", 1),
+				Type:    JSONBasicType("string"),
 			})
 			varbuf.Reset()
 			continue

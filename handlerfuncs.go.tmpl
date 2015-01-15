@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-{{ range .Routes.ByResource }}{{ $route := . }}{{ range .Methods }}{{ $lmethod := . | tolower }}{{ with $funcName := printf "%s%s" $lmethod ($route.Name | symbolName) }}{{ if handlerFuncMissing $funcName }}func (h *Handler) {{ $funcName }}(w http.ResponseWriter, r *http.Request{{ range $route.RouteParams }}, {{ .Varname }} string{{end}}) *endpointError {
+{{ range .Routes.ByResource }}{{ $route := . }}{{ range .Methods }}{{ $lmethod := . | tolower }}{{ with $funcName := printf "%s%s" $lmethod ($route.Name | symbolName) }}{{ if handlerFuncMissing $funcName }}func (h *Handler) {{ $funcName }}(w http.ResponseWriter, r *http.Request{{ range $route.RouteParams }}, {{ .Varname }} {{ .Type }}{{end}}) *endpointError {
 	http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
 	return nil
 }

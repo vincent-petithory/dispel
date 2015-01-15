@@ -180,7 +180,7 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			Path: "/spells/{spell-name}",
 			Name: "spells.one",
 			RouteParams: []RouteParam{
-				{Name: "spell-name", Varname: "spellName"},
+				{Name: "spell-name", Varname: "spellName", Type: JSONBasicType("string")},
 			},
 			Method: "GET",
 			RouteIO: RouteIO{
@@ -247,7 +247,7 @@ func TestParseSchemaByResource(t *testing.T) {
 			Path: "/armors/{armor-id}",
 			Name: "armors.one",
 			RouteParams: []RouteParam{
-				{Name: "armor-id", Varname: "armorId"},
+				{Name: "armor-id", Varname: "armorId", Type: JSONBasicType("string")},
 			},
 			MethodRouteIOMap: MethodRouteIOMap{
 				"GET": RouteIO{
@@ -312,7 +312,7 @@ func TestParseSchemaByResource(t *testing.T) {
 			Path: "/weapons/{weapon-id}",
 			Name: "weapons.one",
 			RouteParams: []RouteParam{
-				{Name: "weapon-id", Varname: "weaponId"},
+				{Name: "weapon-id", Varname: "weaponId", Type: JSONBasicType("string")},
 			},
 			MethodRouteIOMap: MethodRouteIOMap{
 				"GET": RouteIO{
