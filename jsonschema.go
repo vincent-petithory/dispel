@@ -223,12 +223,15 @@ func routeParamsFromPath(s string) ([]RouteParam, error) {
 	for _, r := range s {
 		if r == '{' {
 			if inVar {
-				return nil, fmt.Errorf("routeParamsFromPath: %q: found opening { while already in var", s)
+				return nil, fmt.Errorf("routeParamsFromPath: %q: found opening { while already in a var", s)
 			}
 			inVar = true
 			continue
 		}
 		if r == '}' {
+			if !inVar {
+				return nil, fmt.Errorf("routeParamsFromPath: %q: found closing } while not in a var", s)
+			}
 			inVar = false
 			routeParams = append(routeParams, RouteParam{
 				Name:    varbuf.String(),
