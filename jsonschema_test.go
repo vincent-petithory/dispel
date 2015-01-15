@@ -19,8 +19,15 @@ func getSchema(tb testing.TB, name string) *Schema {
 	return &schema
 }
 
+// getSchemaString is like getSchema but takes a string as json schema data.
+func getSchemaString(tb testing.TB, s string) *Schema {
+	var schema Schema
+	ok(tb, json.Unmarshal([]byte(s), &schema))
+	return &schema
+}
+
 func TestParseSimpleJSONStruct(t *testing.T) {
-	schemaStr := `{
+	schema := getSchemaString(t, `{
     "$schema": "http://json-schema.org/draft-04/hyper-schema",
     "title": "Spell",
     "type": "object",
@@ -38,9 +45,7 @@ func TestParseSimpleJSONStruct(t *testing.T) {
             "type": "boolean"
         }
     }
-}`
-	var schema Schema
-	ok(t, json.Unmarshal([]byte(schemaStr), &schema))
+}`)
 
 	expectedObj := JSONObject{
 		Name: schema.Title,
@@ -53,14 +58,14 @@ func TestParseSimpleJSONStruct(t *testing.T) {
 	}
 	sort.Sort(expectedObj.Fields)
 
-	sp := SchemaParser{RootSchema: &schema}
-	obj, err := sp.JSONTypeFromSchema(schema.Title, &schema)
+	sp := SchemaParser{RootSchema: schema}
+	obj, err := sp.JSONTypeFromSchema(schema.Title, schema)
 	ok(t, err)
 	equals(t, expectedObj, obj)
 }
 
 func TestParseJSONStructWithMixedRef(t *testing.T) {
-	schemaStr := `{
+	schema := getSchemaString(t, `{
     "$schema": "http://json-schema.org/draft-04/hyper-schema",
     "type": "object",
     "definitions": {
@@ -104,9 +109,7 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
             "$ref": "#/definitions/spell"
         }
     }
-}`
-	var schema Schema
-	ok(t, json.Unmarshal([]byte(schemaStr), &schema))
+}`)
 
 	spellSchema, exists := schema.Definitions["spell"]
 	assert(t, exists, "definition %q not found in schema", "spell")
@@ -121,7 +124,7 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
 		},
 	}
 	sort.Sort(expectedObj.Fields)
-	sp := SchemaParser{RootSchema: &schema}
+	sp := SchemaParser{RootSchema: schema}
 	obj, err := sp.JSONTypeFromSchema("Spell", spellSchema)
 	ok(t, err)
 	equals(t, expectedObj, obj)
