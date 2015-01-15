@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/url"
 	"reflect"
 	"regexp"
@@ -368,6 +369,13 @@ func (e InvalidSchemaError) Error() string {
 
 type SchemaParser struct {
 	RootSchema *Schema
+	Log        *log.Logger
+}
+
+func (sp *SchemaParser) logf(format string, v ...interface{}) {
+	if sp.Log != nil {
+		sp.Log.Printf(format, v...)
+	}
 }
 
 func (sp *SchemaParser) ParseRoutes() (Routes, error) {
