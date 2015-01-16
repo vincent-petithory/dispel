@@ -318,6 +318,7 @@ func (o JSONObject) Type() string {
 }
 
 type JSONArray struct {
+	Name  string
 	Items JSONType
 }
 
@@ -546,7 +547,7 @@ func (sp *SchemaParser) JSONTypeFromSchema(name string, schema *Schema) (JSONTyp
 		if err != nil {
 			return nil, err
 		}
-		return JSONArray{Items: jst}, nil
+		return JSONArray{Name: name, Items: jst}, nil
 	case t == "string":
 		return JSONString{}, nil
 	case t == "boolean":

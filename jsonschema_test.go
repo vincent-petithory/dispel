@@ -120,7 +120,7 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
 			{Name: "element", Type: JSONString{}},
 			{Name: "power", Type: JSONInteger{}},
 			{Name: "all", Type: JSONBoolean{}},
-			{Name: "combinable_spells", Type: JSONArray{Items: JSONString{}}},
+			{Name: "combinable_spells", Type: JSONArray{Name: "combinable_spells", Items: JSONString{}}},
 		},
 	}
 	sort.Sort(expectedObj.Fields)
@@ -167,6 +167,7 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			Method:      "GET",
 			RouteIO: RouteIO{
 				OutType: JSONArray{
+					Name: "listSpellOut",
 					Items: JSONObject{
 						Name: "",
 						Fields: JSONFieldList{ // .Name natural sort
@@ -234,6 +235,7 @@ func TestParseSchemaByResource(t *testing.T) {
 				},
 				"GET": RouteIO{
 					OutType: JSONArray{
+						Name: "listArmorOut",
 						Items: JSONObject{
 							Name: "",
 							Fields: JSONFieldList{ // .Name natural sort
@@ -299,6 +301,7 @@ func TestParseSchemaByResource(t *testing.T) {
 				},
 				"GET": RouteIO{
 					OutType: JSONArray{
+						Name: "listWeaponOut",
 						Items: JSONObject{
 							Name: "",
 							Fields: JSONFieldList{ // .Name natural sort
