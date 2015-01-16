@@ -236,7 +236,7 @@ func routeParamsFromPath(s string) ([]RouteParam, error) {
 			routeParams = append(routeParams, RouteParam{
 				Name:    varbuf.String(),
 				Varname: strings.Replace(afterRuneUpper(varbuf.String(), "-"), "Uid", "UID", 1),
-				Type:    JSONBasicType("string"),
+				Type:    JSONString{},
 			})
 			varbuf.Reset()
 			continue
@@ -307,19 +307,13 @@ type JSONObject struct {
 	Fields JSONFieldList
 }
 
-func (jo JSONObject) Type() string {
+func (o JSONObject) Type() string {
 	var buf bytes.Buffer
-	_, _ = buf.WriteString("struct ")
-	if jo.Name != "" {
-		_, _ = buf.WriteString(jo.Name)
-		_, _ = buf.WriteRune(' ')
-	}
 	_, _ = buf.WriteString("{\n")
-	for _, f := range jo.Fields {
-		fmt.Fprintf(&buf, "%s %s", f.Name, f.Type.Type())
+	for _, f := range o.Fields {
+		fmt.Fprintf(&buf, "%s %s\n", f.Name, f.Type.Type())
 	}
-	_, _ = buf.WriteString("}")
-
+	_, _ = buf.WriteString("\n}")
 	return buf.String()
 }
 
@@ -327,14 +321,38 @@ type JSONArray struct {
 	Items JSONType
 }
 
-func (ja JSONArray) Type() string {
-	return fmt.Sprintf("[]%s", ja.Items.Type())
+func (a JSONArray) Type() string {
+	return fmt.Sprintf("[]%s", a.Items.Type())
 }
 
-type JSONBasicType string
+type JSONString struct{}
 
-func (jbt JSONBasicType) Type() string {
-	return string(jbt)
+func (s JSONString) Type() string {
+	return "string"
+}
+
+type JSONBoolean struct{}
+
+func (b JSONBoolean) Type() string {
+	return "bool"
+}
+
+type JSONInteger struct{}
+
+func (i JSONInteger) Type() string {
+	return "integer"
+}
+
+type JSONNumber struct{}
+
+func (n JSONNumber) Type() string {
+	return "number"
+}
+
+type JSONNull struct{}
+
+func (n JSONNull) Type() string {
+	return "null"
 }
 
 type JSONField struct {
@@ -529,10 +547,16 @@ func (sp *SchemaParser) JSONTypeFromSchema(name string, schema *Schema) (JSONTyp
 			return nil, err
 		}
 		return JSONArray{Items: jst}, nil
-	case t == "string" || t == "boolean" || t == "integer" || t == "number":
-		return JSONBasicType(t), nil
+	case t == "string":
+		return JSONString{}, nil
+	case t == "boolean":
+		return JSONBoolean{}, nil
+	case t == "integer":
+		return JSONInteger{}, nil
+	case t == "number":
+		return JSONNumber{}, nil
 	case t == "null":
-		return nil, InvalidSchemaError{*schema, "null: type not supported"}
+		return JSONNull{}, nil
 	default:
 		return nil, InvalidSchemaError{*schema, fmt.Sprintf("unknown type %q", resSchema.Type)}
 	}

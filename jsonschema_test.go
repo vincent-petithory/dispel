@@ -50,10 +50,10 @@ func TestParseSimpleJSONStruct(t *testing.T) {
 	expectedObj := JSONObject{
 		Name: schema.Title,
 		Fields: []JSONField{
-			{Name: "name", Type: JSONBasicType("string")},
-			{Name: "element", Type: JSONBasicType("string")},
-			{Name: "power", Type: JSONBasicType("integer")},
-			{Name: "all", Type: JSONBasicType("boolean")},
+			{Name: "name", Type: JSONString{}},
+			{Name: "element", Type: JSONString{}},
+			{Name: "power", Type: JSONInteger{}},
+			{Name: "all", Type: JSONBoolean{}},
 		},
 	}
 	sort.Sort(expectedObj.Fields)
@@ -116,11 +116,11 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
 	expectedObj := JSONObject{
 		Name: "Spell",
 		Fields: JSONFieldList{
-			{Name: "name", Type: JSONBasicType("string")},
-			{Name: "element", Type: JSONBasicType("string")},
-			{Name: "power", Type: JSONBasicType("integer")},
-			{Name: "all", Type: JSONBasicType("boolean")},
-			{Name: "combinable_spells", Type: JSONArray{Items: JSONBasicType("string")}},
+			{Name: "name", Type: JSONString{}},
+			{Name: "element", Type: JSONString{}},
+			{Name: "power", Type: JSONInteger{}},
+			{Name: "all", Type: JSONBoolean{}},
+			{Name: "combinable_spells", Type: JSONArray{Items: JSONString{}}},
 		},
 	}
 	sort.Sort(expectedObj.Fields)
@@ -143,19 +143,19 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 				InType: JSONObject{
 					Name: "createSpellIn",
 					Fields: JSONFieldList{ // .Name natural sort
-						{Name: "all", Type: JSONBasicType("boolean")},
-						{Name: "element", Type: JSONBasicType("string")},
-						{Name: "name", Type: JSONBasicType("string")},
-						{Name: "power", Type: JSONBasicType("integer")},
+						{Name: "all", Type: JSONBoolean{}},
+						{Name: "element", Type: JSONString{}},
+						{Name: "name", Type: JSONString{}},
+						{Name: "power", Type: JSONInteger{}},
 					},
 				},
 				OutType: JSONObject{
 					Name: "createSpellOut",
 					Fields: JSONFieldList{ // .Name natural sort
-						{Name: "all", Type: JSONBasicType("boolean")},
-						{Name: "element", Type: JSONBasicType("string")},
-						{Name: "name", Type: JSONBasicType("string")},
-						{Name: "power", Type: JSONBasicType("integer")},
+						{Name: "all", Type: JSONBoolean{}},
+						{Name: "element", Type: JSONString{}},
+						{Name: "name", Type: JSONString{}},
+						{Name: "power", Type: JSONInteger{}},
 					},
 				},
 			},
@@ -170,10 +170,10 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 					Items: JSONObject{
 						Name: "",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "all", Type: JSONBasicType("boolean")},
-							{Name: "element", Type: JSONBasicType("string")},
-							{Name: "name", Type: JSONBasicType("string")},
-							{Name: "power", Type: JSONBasicType("integer")},
+							{Name: "all", Type: JSONBoolean{}},
+							{Name: "element", Type: JSONString{}},
+							{Name: "name", Type: JSONString{}},
+							{Name: "power", Type: JSONInteger{}},
 						},
 					},
 				},
@@ -183,17 +183,17 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			Path: "/spells/{spell-name}",
 			Name: "spells.one",
 			RouteParams: []RouteParam{
-				{Name: "spell-name", Varname: "spellName", Type: JSONBasicType("string")},
+				{Name: "spell-name", Varname: "spellName", Type: JSONString{}},
 			},
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
 					Name: "oneSpellOut",
 					Fields: JSONFieldList{ // .Name natural sort
-						{Name: "all", Type: JSONBasicType("boolean")},
-						{Name: "element", Type: JSONBasicType("string")},
-						{Name: "name", Type: JSONBasicType("string")},
-						{Name: "power", Type: JSONBasicType("integer")},
+						{Name: "all", Type: JSONBoolean{}},
+						{Name: "element", Type: JSONString{}},
+						{Name: "name", Type: JSONString{}},
+						{Name: "power", Type: JSONInteger{}},
 					},
 				},
 			},
@@ -219,16 +219,16 @@ func TestParseSchemaByResource(t *testing.T) {
 					InType: JSONObject{
 						Name: "createArmorIn",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBasicType("boolean")},
-							{Name: "name", Type: JSONBasicType("string")},
+							{Name: "can_break", Type: JSONBoolean{}},
+							{Name: "name", Type: JSONString{}},
 						},
 					},
 					OutType: JSONObject{
 						Name: "createArmorOut",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBasicType("boolean")},
-							{Name: "id", Type: JSONBasicType("string")},
-							{Name: "name", Type: JSONBasicType("string")},
+							{Name: "can_break", Type: JSONBoolean{}},
+							{Name: "id", Type: JSONString{}},
+							{Name: "name", Type: JSONString{}},
 						},
 					},
 				},
@@ -237,9 +237,9 @@ func TestParseSchemaByResource(t *testing.T) {
 						Items: JSONObject{
 							Name: "",
 							Fields: JSONFieldList{ // .Name natural sort
-								{Name: "can_break", Type: JSONBasicType("boolean")},
-								{Name: "id", Type: JSONBasicType("string")},
-								{Name: "name", Type: JSONBasicType("string")},
+								{Name: "can_break", Type: JSONBoolean{}},
+								{Name: "id", Type: JSONString{}},
+								{Name: "name", Type: JSONString{}},
 							},
 						},
 					},
@@ -250,16 +250,16 @@ func TestParseSchemaByResource(t *testing.T) {
 			Path: "/armors/{armor-id}",
 			Name: "armors.one",
 			RouteParams: []RouteParam{
-				{Name: "armor-id", Varname: "armorId", Type: JSONBasicType("string")},
+				{Name: "armor-id", Varname: "armorId", Type: JSONString{}},
 			},
 			MethodRouteIOMap: MethodRouteIOMap{
 				"GET": RouteIO{
 					OutType: JSONObject{
 						Name: "oneArmorOut",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBasicType("boolean")},
-							{Name: "id", Type: JSONBasicType("string")},
-							{Name: "name", Type: JSONBasicType("string")},
+							{Name: "can_break", Type: JSONBoolean{}},
+							{Name: "id", Type: JSONString{}},
+							{Name: "name", Type: JSONString{}},
 						},
 					},
 				},
@@ -267,9 +267,9 @@ func TestParseSchemaByResource(t *testing.T) {
 					OutType: JSONObject{
 						Name: "deleteArmorOut",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBasicType("boolean")},
-							{Name: "id", Type: JSONBasicType("string")},
-							{Name: "name", Type: JSONBasicType("string")},
+							{Name: "can_break", Type: JSONBoolean{}},
+							{Name: "id", Type: JSONString{}},
+							{Name: "name", Type: JSONString{}},
 						},
 					},
 				},
@@ -284,16 +284,16 @@ func TestParseSchemaByResource(t *testing.T) {
 					InType: JSONObject{
 						Name: "createWeaponIn",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "damage", Type: JSONBasicType("integer")},
-							{Name: "name", Type: JSONBasicType("string")},
+							{Name: "damage", Type: JSONInteger{}},
+							{Name: "name", Type: JSONString{}},
 						},
 					},
 					OutType: JSONObject{
 						Name: "createWeaponOut",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "damage", Type: JSONBasicType("integer")},
-							{Name: "id", Type: JSONBasicType("string")},
-							{Name: "name", Type: JSONBasicType("string")},
+							{Name: "damage", Type: JSONInteger{}},
+							{Name: "id", Type: JSONString{}},
+							{Name: "name", Type: JSONString{}},
 						},
 					},
 				},
@@ -302,9 +302,9 @@ func TestParseSchemaByResource(t *testing.T) {
 						Items: JSONObject{
 							Name: "",
 							Fields: JSONFieldList{ // .Name natural sort
-								{Name: "damage", Type: JSONBasicType("integer")},
-								{Name: "id", Type: JSONBasicType("string")},
-								{Name: "name", Type: JSONBasicType("string")},
+								{Name: "damage", Type: JSONInteger{}},
+								{Name: "id", Type: JSONString{}},
+								{Name: "name", Type: JSONString{}},
 							},
 						},
 					},
@@ -315,16 +315,16 @@ func TestParseSchemaByResource(t *testing.T) {
 			Path: "/weapons/{weapon-id}",
 			Name: "weapons.one",
 			RouteParams: []RouteParam{
-				{Name: "weapon-id", Varname: "weaponId", Type: JSONBasicType("string")},
+				{Name: "weapon-id", Varname: "weaponId", Type: JSONString{}},
 			},
 			MethodRouteIOMap: MethodRouteIOMap{
 				"GET": RouteIO{
 					OutType: JSONObject{
 						Name: "oneWeaponOut",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "damage", Type: JSONBasicType("integer")},
-							{Name: "id", Type: JSONBasicType("string")},
-							{Name: "name", Type: JSONBasicType("string")},
+							{Name: "damage", Type: JSONInteger{}},
+							{Name: "id", Type: JSONString{}},
+							{Name: "name", Type: JSONString{}},
 						},
 					},
 				},
