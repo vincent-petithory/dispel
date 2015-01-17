@@ -702,7 +702,11 @@ func (sp *SchemaParser) ResolveSchemaRef(schemaRef string, relSchema *Schema) (*
 				fv := schv.FieldByName(capitalize(key))
 				schv = fv
 			case map[string]*Schema:
-				s, ok := t[key]
+				ukey, err := unescapePctEnc(key)
+				if err != nil {
+					return nil, err
+				}
+				s, ok := t[string(ukey)]
 				if !ok {
 					return nil, InvalidSchemaRefError{Ref: schemaRef, Msg: "invalid ref"}
 				}
