@@ -674,7 +674,7 @@ func (sp *SchemaParser) ResolveSchema(schema *Schema) (*Schema, error) {
 		err error
 	)
 	for s = schema; s.Ref != ""; {
-		s, err = sp.ResolveSchemaRef(s.Ref)
+		s, err = sp.ResolveSchemaRef(s.Ref, s)
 		if err != nil {
 			return nil, err
 		}
@@ -682,41 +682,47 @@ func (sp *SchemaParser) ResolveSchema(schema *Schema) (*Schema, error) {
 	return s, nil
 }
 
-// ResolveSchemaRef takes an absolute $ref string and returns the pointed schema.
-// An error is returned if the ref is either not absolute, or it doesn't point to a schema.
-func (sp *SchemaParser) ResolveSchemaRef(schemaRef string) (*Schema, error) {
-	if !strings.HasPrefix(schemaRef, "#/") {
-		return nil, InvalidSchemaRefError{Ref: schemaRef, Msg: "ref is not absolute (missing leading #/)"}
-	}
-	schemaRef = schemaRef[2:]
-	keys := strings.Split(schemaRef, "/")
+// ResolveSchemaRef takes a $ref string and returns the pointed schema.
+//
+// The ref, if relative, is resolved against the relSchema schema. The ref is dereferenced only once.
+// An error is returned if the ref or it doesn't point to a schema.
+func (sp *SchemaParser) ResolveSchemaRef(schemaRef string, relSchema *Schema) (*Schema, error) {
+	// Absolute ref
+	if strings.HasPrefix(schemaRef, "#/") {
+		keys := strings.Split(schemaRef[2:], "/")
 
-	schv := reflect.ValueOf(sp.RootSchema)
-	for _, key := range keys {
-		// Dereference pointers
-		for schv.Kind() == reflect.Ptr || schv.Kind() == reflect.Interface {
-			schv = schv.Elem()
-		}
-		switch t := schv.Interface().(type) {
-		case Schema:
-			fv := schv.FieldByName(capitalize(key))
-			schv = fv
-		case map[string]*Schema:
-			s, ok := t[key]
-			if !ok {
-				return nil, InvalidSchemaRefError{Ref: schemaRef, Msg: "invalid ref"}
+		schv := reflect.ValueOf(sp.RootSchema)
+		for _, key := range keys {
+			// Dereference pointers
+			for schv.Kind() == reflect.Ptr || schv.Kind() == reflect.Interface {
+				schv = schv.Elem()
 			}
-			schv = reflect.ValueOf(s)
-		default:
+			switch t := schv.Interface().(type) {
+			case Schema:
+				fv := schv.FieldByName(capitalize(key))
+				schv = fv
+			case map[string]*Schema:
+				s, ok := t[key]
+				if !ok {
+					return nil, InvalidSchemaRefError{Ref: schemaRef, Msg: "invalid ref"}
+				}
+				schv = reflect.ValueOf(s)
+			default:
+				return nil, InvalidSchemaRefError{Ref: schemaRef, Msg: "value is not a valid Schema"}
+			}
+		}
+		// This has been checked in the for loop
+		schema, ok := schv.Interface().(*Schema)
+		if !ok {
 			return nil, InvalidSchemaRefError{Ref: schemaRef, Msg: "value is not a valid Schema"}
 		}
+		return schema, nil
 	}
-	// This has been checked in the for loop
-	schema, ok := schv.Interface().(*Schema)
+	propertySchema, ok := relSchema.Properties[schemaRef]
 	if !ok {
 		return nil, InvalidSchemaRefError{Ref: schemaRef, Msg: "value is not a valid Schema"}
 	}
-	return schema, nil
+	return propertySchema, nil
 }
 
 // JSONTypeFromSchema parses a JSON Schema and returns a value satisfying the jsonType interface.
@@ -795,7 +801,7 @@ func (sp *SchemaParser) RouteParamsFromLink(link *Link, schema *Schema) ([]Route
 		name = strings.Replace(name, "/definitions/", "-", -1)
 		vname := afterRuneUpper(name, "-")
 
-		varRefSchema, err := sp.ResolveSchemaRef(v)
+		varRefSchema, err := sp.ResolveSchemaRef(v, schema)
 		if err != nil {
 			return nil, err
 		}

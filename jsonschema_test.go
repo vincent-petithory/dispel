@@ -400,6 +400,22 @@ func TestMixedRouteParams(t *testing.T) {
 				},
 			},
 		},
+		{
+			Path: "/materias/{name}",
+			Name: "materias.one",
+			RouteParams: []RouteParam{
+				{Name: "name", Varname: "name", Type: JSONString{}},
+			},
+			Method: "GET",
+			RouteIO: RouteIO{
+				OutType: JSONObject{
+					Name: "oneMateriaOut",
+					Fields: JSONFieldList{ // .Name natural sort
+						{Name: "name", Type: JSONString{}},
+					},
+				},
+			},
+		},
 	}
 	sort.Sort(expectedRoutes)
 

@@ -117,6 +117,30 @@
                     "$ref": "#/definitions/weapon/definitions/magical"
                 }
             }
+        },
+        "materia": {
+            "type": "object",
+            "definitions": {
+                "name": {
+                    "type": "string"
+                }
+            },
+            "links": [
+                {
+                    "title": "Info for a materia",
+                    "href": "/materias/{name}",
+                    "method": "GET",
+                    "rel": "one",
+                    "targetSchema": {
+                        "$ref": "#/definitions/materia"
+                    }
+                }
+            ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/materia/definitions/name"
+                }
+            }
         }
     },
     "properties": {
@@ -128,6 +152,9 @@
         },
         "weapon": {
             "$ref": "#/definitions/weapon"
+        },
+        "materia": {
+            "$ref": "#/definitions/materia"
         }
     }
 }
