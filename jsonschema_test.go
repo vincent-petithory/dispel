@@ -19,7 +19,7 @@ func getSchema(tb testing.TB, name string) *Schema {
 	return &schema
 }
 
-// getSchemaString is like getSchema but takes a string as json schema data.
+// getSchemaString is like getSchema but takes a string as input.
 func getSchemaString(tb testing.TB, s string) *Schema {
 	var schema Schema
 	ok(tb, json.Unmarshal([]byte(s), &schema))
@@ -340,4 +340,133 @@ func TestParseSchemaByResource(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 	equals(t, expectedResourceRoutes, routes.ByResource())
+}
+
+func TestMixedRouteParams(t *testing.T) {
+	schema := getSchema(t, "one-route-mixed-params.json")
+
+	expectedRoutes := Routes{
+		{
+			Path: "/spells/{spell-name}",
+			Name: "spells.one",
+			RouteParams: []RouteParam{
+				{Name: "spell-name", Varname: "spellName", Type: JSONString{}},
+			},
+			Method: "GET",
+			RouteIO: RouteIO{
+				OutType: JSONObject{
+					Name: "oneSpellOut",
+					Fields: JSONFieldList{ // .Name natural sort
+						{Name: "all", Type: JSONBoolean{}},
+						{Name: "element", Type: JSONString{}},
+						{Name: "name", Type: JSONString{}},
+						{Name: "power", Type: JSONInteger{}},
+					},
+				},
+			},
+		},
+		{
+			Path: "/locations/{location-id}",
+			Name: "locations.one",
+			RouteParams: []RouteParam{
+				{Name: "location-id", Varname: "locationId", Type: JSONInteger{}},
+			},
+			Method: "GET",
+			RouteIO: RouteIO{
+				OutType: JSONObject{
+					Name: "oneLocationOut",
+					Fields: JSONFieldList{ // .Name natural sort
+						{Name: "id", Type: JSONInteger{}},
+						{Name: "name", Type: JSONString{}},
+					},
+				},
+			},
+		},
+		{
+			Path: "/weapons/{weapon-id}",
+			Name: "weapons.one",
+			RouteParams: []RouteParam{
+				{Name: "weapon-id", Varname: "weaponId", Type: JSONString{}},
+			},
+			Method: "GET",
+			RouteIO: RouteIO{
+				OutType: JSONObject{
+					Name: "oneWeaponOut",
+					Fields: JSONFieldList{ // .Name natural sort
+						{Name: "id", Type: JSONString{}},
+						{Name: "magical", Type: JSONBoolean{}},
+						{Name: "name", Type: JSONString{}},
+					},
+				},
+			},
+		},
+	}
+	sort.Sort(expectedRoutes)
+
+	sp := SchemaParser{RootSchema: schema}
+	routes, err := sp.ParseRoutes()
+	ok(t, err)
+	equals(t, expectedRoutes, routes)
+}
+
+func TestPreProcessHRefVar(t *testing.T) {
+	tests := []struct {
+		href   string
+		ppHRef string
+	}{
+		{href: "{(#/definitions/spell/definitions/name)}", ppHRef: "{%23%2Fdefinitions%2Fspell%2Fdefinitions%2Fname}"},
+		{href: "{(escape space)}", ppHRef: "{escape%20space}"},
+		{href: "{(escape+plus)}", ppHRef: "{escape%2Bplus}"},
+		{href: "{(escape*asterisk)}", ppHRef: "{escape%2Aasterisk}"},
+		{href: "{(escape(bracket)}", ppHRef: "{escape%28bracket}"},
+		{href: "{(escape))bracket)}", ppHRef: "{escape%29bracket}"},
+		{href: "{(a))b)}", ppHRef: "{a%29b}"},
+		{href: "{(a (b)))}", ppHRef: "{a%20%28b%29}"},
+		{href: "{()}", ppHRef: "{%65mpty}"},
+
+		// We don't support those
+		//{href: "{+$*}", ppHRef: "{+%73elf*}"},
+		//{href: "{+($)*}", ppHRef: "{+%24*}"},
+	}
+	for _, test := range tests {
+		equals(t, test.ppHRef, preProcessHRefVar(test.href))
+	}
+}
+
+func TestVarsFromHRef(t *testing.T) {
+	tests := []struct {
+		href  string
+		vars  []string
+		valid bool
+	}{
+		{href: "/spells/{(#/definitions/spell/definitions/name)}", vars: []string{"#/definitions/spell/definitions/name"}, valid: true},
+		{href: "/documents/{(#/definitions/document/definitions/id)}/pages/{(#/definitions/page/definitions/id)}", vars: []string{"#/definitions/document/definitions/id", "#/definitions/page/definitions/id"}, valid: true},
+	}
+
+	for _, test := range tests {
+		vars, err := varsFromHRef(test.href)
+		if !test.valid {
+			assert(t, err != nil, "Expected invalid href %q, got %q %v", test.href, vars, err)
+			continue
+		}
+		ok(t, err)
+		equals(t, test.vars, vars)
+	}
+}
+
+func TestHRef2name(t *testing.T) {
+	tests := []struct {
+		href string
+		name string
+	}{
+		{href: "/spells/{(#/definitions/spell/definitions/name)}", name: "spells.one"},
+		{href: "/spells/{(#/definitions/id)}", name: "spells.one"},
+		{href: "/spells/{id}", name: "spells.one"},
+	}
+
+	for _, test := range tests {
+		name, err := href2name(test.href)
+		ok(t, err)
+		equals(t, test.name, name)
+	}
 }

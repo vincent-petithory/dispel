@@ -1,0 +1,133 @@
+{
+    "$schema": "http://json-schema.org/draft-04/hyper-schema",
+    "title": "Test API",
+    "type": "object",
+    "definitions": {
+        "hash": {
+            "type": "string",
+            "format": "[0-9]{32}"
+        },
+        "magical": {
+            "type": "boolean"
+        },
+        "spell": {
+            "type": "object",
+            "definitions": {
+                "name": {
+                    "type": "string"
+                },
+                "element": {
+                    "type": "string"
+                },
+                "power": {
+                    "type": "integer"
+                },
+                "all": {
+                    "type": "boolean"
+                }
+            },
+            "links": [
+                {
+                    "title": "Info for a spell",
+                    "href": "/spells/{(#/definitions/spell/definitions/name)}",
+                    "method": "GET",
+                    "rel": "one",
+                    "targetSchema": {
+                        "$ref": "#/definitions/spell"
+                    }
+                }
+            ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/spell/definitions/name"
+                },
+                "element": {
+                    "$ref": "#/definitions/spell/definitions/element"
+                },
+                "power": {
+                    "$ref": "#/definitions/spell/definitions/power"
+                },
+                "all": {
+                    "$ref": "#/definitions/spell/definitions/all"
+                }
+            }
+        },
+        "location": {
+            "type": "object",
+            "definitions": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            },
+            "links": [
+                {
+                    "title": "Info for a location",
+                    "href": "/locations/{(#/definitions/location/definitions/id)}",
+                    "method": "GET",
+                    "rel": "one",
+                    "targetSchema": {
+                        "$ref": "#/definitions/location"
+                    }
+                }
+            ],
+            "properties": {
+                "id": {
+                    "$ref": "#/definitions/location/definitions/id"
+                },
+                "name": {
+                    "$ref": "#/definitions/location/definitions/name"
+                }
+            }
+        },
+        "weapon": {
+            "type": "object",
+            "definitions": {
+                "id": {
+                    "$ref": "#/definitions/hash"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "magical": {
+		    "$ref": "#/definitions/magical"
+                }
+            },
+            "links": [
+                {
+                    "title": "Info for a weapon",
+                    "href": "/weapons/{(#/definitions/weapon/definitions/id)}",
+                    "method": "GET",
+                    "rel": "one",
+                    "targetSchema": {
+                        "$ref": "#/definitions/weapon"
+                    }
+                }
+            ],
+            "properties": {
+                "id": {
+                    "$ref": "#/definitions/weapon/definitions/id"
+                },
+                "name": {
+                    "$ref": "#/definitions/weapon/definitions/name"
+                },
+                "magical": {
+                    "$ref": "#/definitions/weapon/definitions/magical"
+                }
+            }
+        }
+    },
+    "properties": {
+        "spell": {
+            "$ref": "#/definitions/spell"
+        },
+        "location": {
+            "$ref": "#/definitions/location"
+        },
+        "weapon": {
+            "$ref": "#/definitions/weapon"
+        }
+    }
+}

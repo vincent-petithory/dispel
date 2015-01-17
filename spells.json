@@ -46,7 +46,7 @@
                 },
                 {
                     "title": "Info for a spell",
-                    "href": "/spells/{(%23%2Fdefinitions%2Fspell%2Fdefinitions%2Fname)}",
+                    "href": "/spells/{(#/definitions/spell/definitions/name)}",
                     "method": "GET",
                     "rel": "one",
                     "targetSchema": {

@@ -3,10 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
-	"net/url"
 	"reflect"
-	"regexp"
 	"sort"
 	"strings"
 	"unicode"
@@ -214,58 +213,270 @@ func (r ResourceRoutes) Len() int           { return len(r) }
 func (r ResourceRoutes) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 func (r ResourceRoutes) Less(i, j int) bool { return r[i].Name < r[j].Name }
 
-func routeParamsFromPath(s string) ([]RouteParam, error) {
+func href2path(href string) (string, error) {
+	var firstErr error
+	p, err := mapHRefVar(href, func(v string) string {
+		if v[0] != '{' && v[len(v)-1] != '}' {
+			return ""
+		}
+		v = v[1 : len(v)-1]
+		uv, err := unescapePctEnc(v)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			return ""
+		}
+
+		// Strip leading #/definitions/
+		v = strings.Replace(string(uv), "#/definitions/", "", 1)
+		// Hyphenify the remaining ones
+		// TODO allow customize this
+		v = strings.Replace(v, "/definitions/", "-", -1)
+
+		return fmt.Sprintf("{%s}", v)
+	})
+	if err != nil {
+		return "", err
+	}
+	if firstErr != nil {
+		return "", firstErr
+	}
+	return p, nil
+}
+
+func href2name(href string) (string, error) {
+	const varnameRepl = "one"
+	var firstErr error
+	name, err := mapHRefVar(href, func(v string) string {
+		return varnameRepl
+	})
+	if err != nil {
+		return "", err
+	}
+	if firstErr != nil {
+		return "", firstErr
+	}
+	if strings.HasPrefix(name, "/") {
+		name = name[1:]
+	}
+	name = strings.Replace(name, "/", ".", -1)
+	return name, nil
+}
+
+func preProcessHRefVar(v string) string {
+	if len(v) < 2 {
+		return v
+	}
+	if v[0] != '{' && v[len(v)-1] != '}' {
+		return v
+	}
+	v = v[1 : len(v)-1]
 	var (
-		inVar       bool
-		varbuf      bytes.Buffer
-		routeParams []RouteParam
+		escbuf     bytes.Buffer
+		buf        bytes.Buffer
+		inEscBlock bool
 	)
-	for _, r := range s {
-		if r == '{' {
-			if inVar {
-				return nil, fmt.Errorf("routeParamsFromPath: %q: found opening { while already in a var", s)
-			}
-			inVar = true
-			continue
+
+	reader := strings.NewReader(v)
+	for {
+		r, _, err := reader.ReadRune()
+		if err == io.EOF {
+			break
 		}
-		if r == '}' {
-			if !inVar {
-				return nil, fmt.Errorf("routeParamsFromPath: %q: found closing } while not in a var", s)
+		switch r {
+		case '(':
+			if !inEscBlock {
+				inEscBlock = true
+			} else {
+				_, _ = escbuf.WriteRune(r)
 			}
-			inVar = false
-			routeParams = append(routeParams, RouteParam{
-				Name:    varbuf.String(),
-				Varname: strings.Replace(afterRuneUpper(varbuf.String(), "-"), "Uid", "UID", 1),
-				Type:    JSONString{},
-			})
-			varbuf.Reset()
-			continue
-		}
-		if inVar {
-			_, _ = varbuf.WriteRune(r)
+		case ')':
+			r2, _, err := reader.ReadRune()
+			if err != io.EOF {
+				if r2 != ')' {
+					_ = reader.UnreadRune()
+				} else {
+					_, _ = escbuf.WriteRune(r2)
+					continue
+				}
+			}
+
+			if inEscBlock {
+				inEscBlock = false
+			}
+			// Escape string
+			v := rfc6570Escape(escbuf.Bytes())
+			escbuf.Reset()
+			if v == "" {
+				v = "%65mpty"
+			}
+			_, _ = io.WriteString(&buf, v)
+		default:
+			if inEscBlock {
+				_, _ = escbuf.WriteRune(r)
+			} else {
+				_, _ = buf.WriteRune(r)
+			}
 		}
 	}
-	return routeParams, nil
+	return fmt.Sprintf("{%s}", buf.String())
 }
 
-func href2path(s string) string {
-	p := refPattern.ReplaceAllStringFunc(s, func(m string) string {
-		// Unescape string
-		m, err := url.QueryUnescape(m)
-		if err != nil {
-			panic(err)
+func rfc6570Escape(data []byte) string {
+	var buf = new(bytes.Buffer)
+	for _, b := range data {
+		switch {
+		case (b >= 'a' && b <= 'z') ||
+			(b >= 'A' && b <= 'Z') ||
+			(b >= '0' && b <= '9') ||
+			b == '_' ||
+			b == '.':
+			_ = buf.WriteByte(b)
+		default:
+			fmt.Fprintf(buf, "%%%X", b)
 		}
-		m = strings.Replace(m, "#/definitions/", "", 1)
-		m = strings.Replace(m, "/definitions/", "-", -1)
-		return "{" + m[2:len(m)-2] + "}"
-	})
-	return p
+	}
+	return buf.String()
 }
 
-func href2name(s string) string {
-	name := refPattern.ReplaceAllString(s, "one")
-	name = strings.Replace(name, "/", ".", -1)
-	return name[1:]
+func isHex(c byte) bool {
+	switch {
+	case c >= 'a' && c <= 'f':
+		return true
+	case c >= 'A' && c <= 'F':
+		return true
+	case c >= '0' && c <= '9':
+		return true
+	}
+	return false
+}
+
+// borrowed from net/url/url.go
+func unhex(c byte) byte {
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0'
+	case 'a' <= c && c <= 'f':
+		return c - 'a' + 10
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 10
+	}
+	return 0
+}
+
+func unescapePctEnc(s string) ([]byte, error) {
+	var buf = new(bytes.Buffer)
+	reader := strings.NewReader(s)
+
+	for {
+		r, size, err := reader.ReadRune()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		if size > 1 {
+			return nil, fmt.Errorf("non-ASCII char detected")
+		}
+
+		switch r {
+		case '%':
+			eb1, err := reader.ReadByte()
+			if err == io.EOF {
+				return nil, fmt.Errorf("unexpected end of unescape sequence")
+			}
+			if err != nil {
+				return nil, err
+			}
+			if !isHex(eb1) {
+				return nil, fmt.Errorf("invalid char 0x%x in unescape sequence", r)
+			}
+			eb0, err := reader.ReadByte()
+			if err == io.EOF {
+				return nil, fmt.Errorf("unexpected end of unescape sequence")
+			}
+			if err != nil {
+				return nil, err
+			}
+			if !isHex(eb0) {
+				return nil, fmt.Errorf("invalid char 0x%x in unescape sequence", r)
+			}
+			_ = buf.WriteByte(unhex(eb0) + unhex(eb1)*16)
+		default:
+			_ = buf.WriteByte(byte(r))
+		}
+	}
+	return buf.Bytes(), nil
+}
+
+func varsFromHRef(href string) ([]string, error) {
+	var vars []string
+	var firstErr error
+	_, err := mapHRefVar(href, func(v string) string {
+		if v[0] != '{' && v[len(v)-1] != '}' {
+			vars = append(vars, v)
+			return ""
+		}
+		v = v[1 : len(v)-1]
+		uv, err := unescapePctEnc(v)
+		if err != nil {
+			if firstErr == nil {
+				firstErr = err
+			}
+			return ""
+		}
+		vars = append(vars, string(uv))
+		return ""
+	})
+	if err != nil {
+		return nil, err
+	}
+	if firstErr != nil {
+		return nil, firstErr
+	}
+	return vars, err
+}
+
+// mapHRefVar runs varFunc on each variable in href. It can also serve as a for-each.
+func mapHRefVar(href string, varFunc func(string) string) (string, error) {
+	var (
+		varbuf bytes.Buffer
+		inVar  bool
+		buf    bytes.Buffer
+	)
+	for _, r := range href {
+		switch r {
+		case '{':
+			if inVar {
+				return "", fmt.Errorf("varsFromHRef: %q: found opening { while already in a var", href)
+			}
+			inVar = true
+			_, _ = varbuf.WriteRune(r)
+		case '}':
+			if !inVar {
+				return "", fmt.Errorf("varsFromHRef: %q: found closing } while not in a var", href)
+			}
+			inVar = false
+			_, _ = varbuf.WriteRune(r)
+
+			ppv := preProcessHRefVar(varbuf.String())
+			varbuf.Reset()
+
+			v := varFunc(ppv)
+			_, _ = io.WriteString(&buf, v)
+		default:
+			if inVar {
+				// TODO should check r is an allowed char (href substitution variable)
+				// when we also support URI template operators.
+				_, _ = varbuf.WriteRune(r)
+			} else {
+				_, _ = buf.WriteRune(r)
+			}
+		}
+	}
+	return buf.String(), nil
 }
 
 func capitalize(s string) string {
@@ -297,8 +508,6 @@ OuterLoop:
 	}
 	return buf.String()
 }
-
-var refPattern = regexp.MustCompile(`{\([^/]+\)}`)
 
 // json types
 
@@ -415,14 +624,20 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 			return nil, err
 		}
 		for _, link := range resProperty.Links {
-			p := href2path(link.HRef)
-			route := &Route{
-				Path:        p,
-				Name:        href2name(link.HRef),
-				RouteParams: []RouteParam{},
-				Method:      strings.ToUpper(link.Method),
+			p, err := href2path(link.HRef)
+			if err != nil {
+				return nil, err
 			}
-			rp, err := routeParamsFromPath(p)
+			n, err := href2name(link.HRef)
+			if err != nil {
+				return nil, err
+			}
+			route := &Route{
+				Path:   p,
+				Name:   n,
+				Method: strings.ToUpper(link.Method),
+			}
+			rp, err := sp.RouteParamsFromLink(&link, resProperty)
 			if err != nil {
 				return nil, err
 			}
@@ -561,4 +776,45 @@ func (sp *SchemaParser) JSONTypeFromSchema(name string, schema *Schema) (JSONTyp
 	default:
 		return nil, InvalidSchemaError{*schema, fmt.Sprintf("unknown type %q", resSchema.Type)}
 	}
+}
+
+// RouteParamsFromLink parses the link to return a slice of RouteParam,
+// dereferenced using the schema from which the link originates.
+func (sp *SchemaParser) RouteParamsFromLink(link *Link, schema *Schema) ([]RouteParam, error) {
+	var routeParams []RouteParam
+	vars, err := varsFromHRef(link.HRef)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, v := range vars {
+		// Strip leading #/definitions/
+		name := strings.Replace(v, "#/definitions/", "", 1)
+		// Hyphenify the remaining ones
+		// TODO allow customize this
+		name = strings.Replace(name, "/definitions/", "-", -1)
+		vname := afterRuneUpper(name, "-")
+
+		varRefSchema, err := sp.ResolveSchemaRef(v)
+		if err != nil {
+			return nil, err
+		}
+		varRefSchema, err = sp.ResolveSchema(varRefSchema)
+		if err != nil {
+			return nil, err
+		}
+
+		// FIXME careful, we rely on absolute to construct the name here
+		names := strings.Split(v, "/")
+		typ, err := sp.JSONTypeFromSchema(names[len(names)-1], varRefSchema)
+		if err != nil {
+			return nil, err
+		}
+		routeParams = append(routeParams, RouteParam{
+			Name:    name,
+			Varname: vname,
+			Type:    typ,
+		})
+	}
+	return routeParams, nil
 }

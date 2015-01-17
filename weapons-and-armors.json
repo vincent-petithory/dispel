@@ -53,7 +53,7 @@
                 },
                 {
                     "title": "Deletes an existing armor",
-                    "href": "/armors/{(%23%2Fdefinitions%2Farmor%2Fdefinitions%2Fid)}",
+                    "href": "/armors/{(#/definitions/armor/definitions/id)}",
                     "method": "DELETE",
                     "rel": "delete",
                     "targetSchema": {
@@ -62,7 +62,7 @@
                 },
                 {
                     "title": "Info for an armor",
-                    "href": "/armors/{(%23%2Fdefinitions%2Farmor%2Fdefinitions%2Fid)}",
+                    "href": "/armors/{(#/definitions/armor/definitions/id)}",
                     "method": "GET",
                     "rel": "one",
                     "targetSchema": {
@@ -129,7 +129,7 @@
                 },
                 {
                     "title": "Info for a weapon",
-                    "href": "/weapons/{(%23%2Fdefinitions%2Fweapon%2Fdefinitions%2Fid)}",
+                    "href": "/weapons/{(#/definitions/weapon/definitions/id)}",
                     "method": "GET",
                     "rel": "one",
                     "targetSchema": {
