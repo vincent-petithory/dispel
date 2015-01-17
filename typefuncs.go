@@ -1,4 +1,4 @@
-package main
+package dispel
 
 import (
 	"fmt"
@@ -19,9 +19,9 @@ func (w walker) Visit(node ast.Node) ast.Visitor {
 	return nil
 }
 
-// findTypesFuncs parses the AST of files of a package, look for methods on types listed in typesNames.
+// FindTypesFuncs parses the AST of files of a package, look for methods on types listed in typesNames.
 // It returns a map of func names -> *ast.FuncDecl.
-func findTypesFuncs(path string, pkgName string, typeNames []string, excludeFiles []string) (map[string]*ast.FuncDecl, error) {
+func FindTypesFuncs(path string, pkgName string, typeNames []string, excludeFiles []string) (map[string]*ast.FuncDecl, error) {
 	fset := token.NewFileSet()
 	pkgs, err := parser.ParseDir(fset, path, func(fi os.FileInfo) bool {
 		for _, f := range excludeFiles {

@@ -1,4 +1,4 @@
-package main
+package dispel
 
 import (
 	"fmt"
@@ -90,7 +90,7 @@ func (fg funcGroup2) F23() {}
 		ok(t, ioutil.WriteFile(filepath.Join(tmpDir, pkgName, name), []byte(contents), 0600))
 	}
 
-	funcDecls, err := findTypesFuncs(filepath.Join(tmpDir, pkgName), pkgName, types, []string{"otfuncs.go"})
+	funcDecls, err := FindTypesFuncs(filepath.Join(tmpDir, pkgName), pkgName, types, []string{"otfuncs.go"})
 	ok(t, err)
 	funcNames := make([]string, 0, len(funcDecls))
 	for funcName := range funcDecls {

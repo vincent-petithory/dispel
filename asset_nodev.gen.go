@@ -2,7 +2,7 @@
 
 // +build !dev
 
-package main
+package dispel
 
 import (
 	"encoding/base64"
