@@ -485,10 +485,10 @@ func capitalize(s string) string {
 }
 
 func symbolName(s string) string {
-	return capitalize(afterRuneUpper(s, ".- "))
+	return capitalize(toUpperAfterAny(s, ".- "))
 }
 
-func afterRuneUpper(s string, chars string) string {
+func toUpperAfterAny(s string, chars string) string {
 	var buf bytes.Buffer
 	var upnext bool
 OuterLoop:
@@ -803,7 +803,7 @@ func (sp *SchemaParser) RouteParamsFromLink(link *Link, schema *Schema) ([]Route
 		// Hyphenify the remaining ones
 		// TODO allow customize this
 		name = strings.Replace(name, "/definitions/", "-", -1)
-		vname := afterRuneUpper(name, "-")
+		vname := toUpperAfterAny(name, "-")
 
 		varRefSchema, err := sp.ResolveSchemaRef(v, schema)
 		if err != nil {

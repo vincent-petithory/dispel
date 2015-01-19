@@ -52,7 +52,7 @@ func NewTemplate() (*Template, error) {
 		"tolower":    strings.ToLower,
 		"capitalize": capitalize,
 		"symbolName": func(s string) string {
-			return capitalize(afterRuneUpper(s, ".- "))
+			return capitalize(toUpperAfterAny(s, ".- "))
 		},
 		"hasItem": func(a []string, s string) bool {
 			for _, item := range a {
