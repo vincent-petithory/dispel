@@ -6,9 +6,14 @@ import (
 	"net/http"
 )
 
-{{ $existingHandlers := .ExistingHandlers }}{{ range .Routes.ByResource }}{{ $route := . }}{{ range .Methods }}{{ $lmethod := . | tolower }}{{ with $funcName := printf "%s%s" $lmethod ($route.Name | symbolName) }}{{ if not hasItem $existingHandlers $funcName }}func (h *Handler) {{ $funcName }}(w http.ResponseWriter, r *http.Request{{ range $route.RouteParams }}, {{ .Varname }} {{ .Type }}{{end}}) *endpointError {
-	http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
-	return nil
+{{/* Generate a function for each method+resource */}}
+{{ $handlerReceiverType := .HandlerReceiverType }}{{ $existingHandlers := .ExistingHandlers }}{{ range .Routes.ByResource }}{{ $route := . }}{{ range .Methods }}{{ $lmethod := . | tolower }}{{ $io := index $route.MethodRouteIOMap . }}{{/*
+*/}}{{ with $funcName := printf "%s%s" $lmethod ($route.Name | symbolName) }}{{/*
+Do not generate the handler if it's already present in the package
+*/}}{{ if not (hasItem $existingHandlers $funcName) }}{{/*
+*/}}func ({{ varname $handlerReceiverType }} {{ $handlerReceiverType }}) {{ $funcName }}(w http.ResponseWriter, r *http.Request{{ range $route.RouteParams }}, {{ .Varname }} string{{end}}{{/*
+Generate in and out types*/}}{{ if $io.InType }}, vreq interface{}{{end}}) (int{{ if $io.OutType }}, interface{}{{end}}, error) {
+	return http.StatusNotImplemented{{ if $io.OutType }}, nil{{end}}, nil
 }
 
 {{end}}{{end}}{{end}}{{end}}

@@ -6,15 +6,46 @@ import (
 	"net/http"
 )
 
-// registerAPIHandlers registers resource handlers for each unique named route of the API.
-func (h *Handler) registerAPIHandlers() {
-{{ range .Routes.ByResource }}	h.Routes.r.Get("{{ .Name }}").Handler(&MethodHandler{
-{{ $route := . }}{{ range .Methods }}	{{ . | tolower | capitalize }}: endpointHandler(func(w http.ResponseWriter, r *http.Request) *endpointError {
-        {{ range $route.RouteParams }}{{ .Varname }}, err := h.getUID(w, r, "{{ .Name }}")
+type handlerRegisterer interface {
+    RegisterHandler(routeName string, handler http.Handler)
+}
+
+type routeParamGetter interface {
+    GetRouteParam(w http.ResponseWriter, r *http.Request, name string) (string, error)
+}
+
+type httpEncoder interface {
+    Encode(http.ResponseWriter, *http.Request, interface{}) error
+}
+
+type httpDecoder interface {
+    Decode(http.ResponseWriter, *http.Request, interface{}) error
+}
+
+type errorHTTPHandlerFunc func (http.ResponseWriter, *http.Request) (int, error)
+
+// registerHandlers registers resource handlers for each unique named route.{{ $handlerReceiverType := .HandlerReceiverType }}
+func registerHandlers(hr handlerRegisterer, rpg routeParamGetter, {{ varname $handlerReceiverType}} {{ $handlerReceiverType }}, hd httpDecoder, he httpEncoder, ehhf func(errorHTTPHandlerFunc) http.handler) {
+{{ range .Routes.ByResource }}    hr(route{{ symbolName .Name }}, &MethodHandler{
+{{ $route := . }}{{ range .Methods }}	{{ . | tolower | capitalize }}: ehhf(func(w http.ResponseWriter, r *http.Request) (int, error) {
+        {{ range $route.RouteParams }}{{ .Varname }}, err := rpg(w, r, "{{ .Name }}")
 	if err != nil {
-		return newEndpointError(err, http.StatusBadRequest)
-	}
-	{{end}}	return h.{{ . | tolower }}{{ $route.Name | symbolName }}(w, r{{ range $route.RouteParams }},{{ .Varname }}{{end}})
+		return http.StatusBadRequest, err
+	}{{end}}
+
+	{{ $io := index $route.MethodRouteIOMap . }}
+	{{ if $io.InType }}var vreq interface{}
+	if err := hd.Decode(w, r, &vreq); err != nil {
+            return http.StatusBadRequest, err
+	}{{ end }}
+
+	status{{ if $io.OutType }}, vresp{{end}}, err := {{ varname $handlerReceiverType}}.{{ . | tolower }}{{ $route.Name | symbolName }}(w, r{{/*
+Route params and I/O types
+*/}}{{ range $route.RouteParams }}, {{ .Varname }}{{end}}{{ if $io.InType }}, vreq{{end}})
+        if err != nil {
+            return status, err
+        }
+        return status, he.Encode(w, r, vresp)
 }),
 {{end}}
 })

@@ -3,17 +3,32 @@
 package {{ .PkgName }}
 
 import (
-	"net/url"
+    "net/url"
 )
 
-// setupRoutes registers the url path and name of all routes of the API.
-func (r *Routes) setupRoutes() {
-{{ range .Routes.ByResource }}	r.r.Path("{{ .Path }}").Name("{{ .Name }}")
+type routeRegisterer interface {
+    RegisterRoute(path string, name string)
+}
+
+type routeReverser interface {
+    ReverseRoute(name string, params ...string) *url.URL 
+}
+
+type routeReverse struct {
+    R routeReverser
+}
+
+// registerRoutes uses rr to register the routes by path and name.
+func registerRoutes(rr routeRegisterer) {
+{{ range .Routes.ByResource }}    rr.RegisterRoute("{{ .Path }}", route{{ symbolName .Name }})
 {{end}}}
 
-// URL builders
-
-{{ range .Routes.ByResource }}func (r *Routes) {{ .Name | symbolName }}({{ range .RouteParams }}{{ .Varname }} string,{{end}}) *url.URL {
-	return r.routeURL("{{ .Name }}", {{ range .RouteParams }}"{{ .Name }}", {{ .Varname }},{{end}})
+{{ range .Routes.ByResource }}func (rr *routeReverse) {{ .Name | symbolName }}({{ range .RouteParams }}{{ .Varname }} string,{{end}}) *url.URL {
+    return rr.R.ReverseRoute(route{{ symbolName .Name }}, {{ range .RouteParams }}"{{ .Name }}", {{ .Varname }},{{end}})
 }
 {{end}}
+
+const (
+{{ range .Routes.ByResource }}    route{{ symbolName .Name }} = "{{ .Name }}"
+{{end}}
+)

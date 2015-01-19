@@ -1,10 +1,12 @@
 package dispel
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
 	"text/template"
+	"unicode"
 )
 
 //go:generate -command asset go run ./asset.go
@@ -41,10 +43,11 @@ func (t *Template) Names() []string {
 
 // TemplateContext represents the context passed to a Template.
 type TemplateContext struct {
-	Prgm             string
-	PkgName          string
-	Routes           Routes
-	ExistingHandlers []string
+	Prgm                string
+	PkgName             string
+	Routes              Routes
+	HandlerReceiverType string
+	ExistingHandlers    []string
 }
 
 func NewTemplate() (*Template, error) {
@@ -62,6 +65,25 @@ func NewTemplate() (*Template, error) {
 			}
 			return false
 
+		},
+		"varname": func(s string) string {
+			var buf bytes.Buffer
+			var pickedFirstNonSymbolRune bool
+			for _, r := range s {
+				switch {
+				case r == '*':
+					continue
+				case unicode.IsUpper(r):
+					_, _ = buf.WriteRune(unicode.ToLower(r))
+					pickedFirstNonSymbolRune = true
+				default:
+					if !pickedFirstNonSymbolRune {
+						_, _ = buf.WriteRune(unicode.ToLower(r))
+						pickedFirstNonSymbolRune = true
+					}
+				}
+			}
+			return buf.String()
 		},
 	})
 	for name, tmpl := range templatesMap {
