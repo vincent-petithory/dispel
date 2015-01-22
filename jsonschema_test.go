@@ -132,7 +132,7 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
 }
 
 func TestParseSchemaWithRoutesOneResource(t *testing.T) {
-	schema := getSchema(t, "spells.json")
+	schema := getSchema(t, "testdata/spells.json")
 
 	expectedRoutes := Routes{
 		{
@@ -215,7 +215,7 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 }
 
 func TestParseSchemaByResource(t *testing.T) {
-	schema := getSchema(t, "weapons-and-armors.json")
+	schema := getSchema(t, "testdata/weapons-and-armors.json")
 	expectedResourceRoutes := ResourceRoutes{
 		{
 			Path:        "/armors",
@@ -357,7 +357,7 @@ func TestParseSchemaByResource(t *testing.T) {
 }
 
 func TestMixedRouteParams(t *testing.T) {
-	schema := getSchema(t, "one-route-mixed-params.json")
+	schema := getSchema(t, "testdata/one-route-mixed-params.json")
 
 	expectedRoutes := Routes{
 		{

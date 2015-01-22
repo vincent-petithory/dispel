@@ -18,7 +18,7 @@ func TestTemplateCompiles(t *testing.T) {
 }
 
 func TestTemplateRoutes(t *testing.T) {
-	schema := getSchema(t, "spells.json")
+	schema := getSchema(t, "testdata/spells.json")
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
@@ -83,7 +83,7 @@ const (
 }
 
 func TestTemplateHandlers(t *testing.T) {
-	schema := getSchema(t, "spells.json")
+	schema := getSchema(t, "testdata/spells.json")
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
@@ -178,7 +178,7 @@ func registerHandlers(hr handlerRegisterer, rpg routeParamGetter, a *App, hd htt
 }
 
 func TestTemplateHandlerFuncs(t *testing.T) {
-	schema := getSchema(t, "spells.json")
+	schema := getSchema(t, "testdata/spells.json")
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
@@ -228,7 +228,7 @@ func (a *App) getSpellsOne(w http.ResponseWriter, r *http.Request, spellName str
 }
 
 func TestTemplateTypes(t *testing.T) {
-	schema := getSchema(t, "spells.json")
+	schema := getSchema(t, "testdata/spells.json")
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
