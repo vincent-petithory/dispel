@@ -59,7 +59,7 @@ func TestParseSimpleJSONStruct(t *testing.T) {
 	sort.Sort(expectedObj.Fields)
 
 	sp := SchemaParser{RootSchema: schema}
-	obj, err := sp.JSONTypeFromSchema(schema.Title, schema)
+	obj, err := sp.JSONTypeFromSchema(schema.Title, schema, "")
 	ok(t, err)
 	equals(t, expectedObj, obj)
 }
@@ -111,21 +111,22 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
     }
 }`)
 
-	spellSchema, exists := schema.Definitions["spell"]
+	spellSchema, exists := schema.Properties["spell"]
 	assert(t, exists, "definition %q not found in schema", "spell")
 	expectedObj := JSONObject{
 		Name: "Spell",
+		ref:  "#/definitions/spell",
 		Fields: JSONFieldList{
-			{Name: "name", Type: JSONString{}},
+			{Name: "name", Type: JSONString{ref: "#/definitions/spell/definitions/name"}},
 			{Name: "element", Type: JSONString{}},
-			{Name: "power", Type: JSONInteger{}},
-			{Name: "all", Type: JSONBoolean{}},
-			{Name: "combinable_spells", Type: JSONArray{Name: "combinable_spells", Items: JSONString{}}},
+			{Name: "power", Type: JSONInteger{ref: "#/definitions/spell/definitions/power"}},
+			{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
+			{Name: "combinable_spells", Type: JSONArray{Name: "combinable_spells", Items: JSONString{ref: "#/definitions/spell/definitions/name"}}},
 		},
 	}
 	sort.Sort(expectedObj.Fields)
 	sp := SchemaParser{RootSchema: schema}
-	obj, err := sp.JSONTypeFromSchema("Spell", spellSchema)
+	obj, err := sp.JSONTypeFromSchema("Spell", spellSchema, spellSchema.Ref)
 	ok(t, err)
 	equals(t, expectedObj, obj)
 }
@@ -142,20 +143,22 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			RouteIO: RouteIO{
 				InType: JSONObject{
 					Name: "createSpellIn",
+					ref:  "#/definitions/spell",
 					Fields: JSONFieldList{ // .Name natural sort
-						{Name: "all", Type: JSONBoolean{}},
-						{Name: "element", Type: JSONString{}},
-						{Name: "name", Type: JSONString{}},
-						{Name: "power", Type: JSONInteger{}},
+						{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
+						{Name: "element", Type: JSONString{ref: "#/definitions/spell/definitions/element"}},
+						{Name: "name", Type: JSONString{ref: "#/definitions/spell/definitions/name"}},
+						{Name: "power", Type: JSONInteger{ref: "#/definitions/spell/definitions/power"}},
 					},
 				},
 				OutType: JSONObject{
 					Name: "createSpellOut",
+					ref:  "#/definitions/spell",
 					Fields: JSONFieldList{ // .Name natural sort
-						{Name: "all", Type: JSONBoolean{}},
-						{Name: "element", Type: JSONString{}},
-						{Name: "name", Type: JSONString{}},
-						{Name: "power", Type: JSONInteger{}},
+						{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
+						{Name: "element", Type: JSONString{ref: "#/definitions/spell/definitions/element"}},
+						{Name: "name", Type: JSONString{ref: "#/definitions/spell/definitions/name"}},
+						{Name: "power", Type: JSONInteger{ref: "#/definitions/spell/definitions/power"}},
 					},
 				},
 			},
@@ -168,13 +171,15 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			RouteIO: RouteIO{
 				OutType: JSONArray{
 					Name: "listSpellOut",
+					ref:  "",
 					Items: JSONObject{
 						Name: "",
+						ref:  "#/definitions/spell",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "all", Type: JSONBoolean{}},
-							{Name: "element", Type: JSONString{}},
-							{Name: "name", Type: JSONString{}},
-							{Name: "power", Type: JSONInteger{}},
+							{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
+							{Name: "element", Type: JSONString{ref: "#/definitions/spell/definitions/element"}},
+							{Name: "name", Type: JSONString{ref: "#/definitions/spell/definitions/name"}},
+							{Name: "power", Type: JSONInteger{ref: "#/definitions/spell/definitions/power"}},
 						},
 					},
 				},
@@ -184,17 +189,18 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			Path: "/spells/{spell-name}",
 			Name: "spells.one",
 			RouteParams: []RouteParam{
-				{Name: "spell-name", Varname: "spellName", Type: JSONString{}},
+				{Name: "spell-name", Varname: "spellName", Type: JSONString{ref: "#/definitions/spell/definitions/name"}},
 			},
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
 					Name: "oneSpellOut",
+					ref:  "#/definitions/spell",
 					Fields: JSONFieldList{ // .Name natural sort
-						{Name: "all", Type: JSONBoolean{}},
-						{Name: "element", Type: JSONString{}},
-						{Name: "name", Type: JSONString{}},
-						{Name: "power", Type: JSONInteger{}},
+						{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
+						{Name: "element", Type: JSONString{ref: "#/definitions/spell/definitions/element"}},
+						{Name: "name", Type: JSONString{ref: "#/definitions/spell/definitions/name"}},
+						{Name: "power", Type: JSONInteger{ref: "#/definitions/spell/definitions/power"}},
 					},
 				},
 			},
@@ -220,16 +226,17 @@ func TestParseSchemaByResource(t *testing.T) {
 					InType: JSONObject{
 						Name: "createArmorIn",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBoolean{}},
-							{Name: "name", Type: JSONString{}},
+							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
+							{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
 						},
 					},
 					OutType: JSONObject{
 						Name: "createArmorOut",
+						ref:  "#/definitions/armor",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBoolean{}},
-							{Name: "id", Type: JSONString{}},
-							{Name: "name", Type: JSONString{}},
+							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
+							{Name: "id", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
+							{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
 						},
 					},
 				},
@@ -238,10 +245,11 @@ func TestParseSchemaByResource(t *testing.T) {
 						Name: "listArmorOut",
 						Items: JSONObject{
 							Name: "",
+							ref:  "#/definitions/armor",
 							Fields: JSONFieldList{ // .Name natural sort
-								{Name: "can_break", Type: JSONBoolean{}},
-								{Name: "id", Type: JSONString{}},
-								{Name: "name", Type: JSONString{}},
+								{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
+								{Name: "id", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
+								{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
 							},
 						},
 					},
@@ -252,26 +260,28 @@ func TestParseSchemaByResource(t *testing.T) {
 			Path: "/armors/{armor-id}",
 			Name: "armors.one",
 			RouteParams: []RouteParam{
-				{Name: "armor-id", Varname: "armorId", Type: JSONString{}},
+				{Name: "armor-id", Varname: "armorId", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
 			},
 			MethodRouteIOMap: MethodRouteIOMap{
 				"GET": RouteIO{
 					OutType: JSONObject{
 						Name: "oneArmorOut",
+						ref:  "#/definitions/armor",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBoolean{}},
-							{Name: "id", Type: JSONString{}},
-							{Name: "name", Type: JSONString{}},
+							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
+							{Name: "id", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
+							{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
 						},
 					},
 				},
 				"DELETE": RouteIO{
 					OutType: JSONObject{
 						Name: "deleteArmorOut",
+						ref:  "#/definitions/armor",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBoolean{}},
-							{Name: "id", Type: JSONString{}},
-							{Name: "name", Type: JSONString{}},
+							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
+							{Name: "id", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
+							{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
 						},
 					},
 				},
@@ -285,17 +295,19 @@ func TestParseSchemaByResource(t *testing.T) {
 				"POST": RouteIO{
 					InType: JSONObject{
 						Name: "createWeaponIn",
+						ref:  "",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "damage", Type: JSONInteger{}},
-							{Name: "name", Type: JSONString{}},
+							{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
+							{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
 						},
 					},
 					OutType: JSONObject{
 						Name: "createWeaponOut",
+						ref:  "#/definitions/weapon",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "damage", Type: JSONInteger{}},
-							{Name: "id", Type: JSONString{}},
-							{Name: "name", Type: JSONString{}},
+							{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
+							{Name: "id", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
+							{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
 						},
 					},
 				},
@@ -304,10 +316,11 @@ func TestParseSchemaByResource(t *testing.T) {
 						Name: "listWeaponOut",
 						Items: JSONObject{
 							Name: "",
+							ref:  "#/definitions/weapon",
 							Fields: JSONFieldList{ // .Name natural sort
-								{Name: "damage", Type: JSONInteger{}},
-								{Name: "id", Type: JSONString{}},
-								{Name: "name", Type: JSONString{}},
+								{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
+								{Name: "id", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
+								{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
 							},
 						},
 					},
@@ -318,16 +331,17 @@ func TestParseSchemaByResource(t *testing.T) {
 			Path: "/weapons/{weapon-id}",
 			Name: "weapons.one",
 			RouteParams: []RouteParam{
-				{Name: "weapon-id", Varname: "weaponId", Type: JSONString{}},
+				{Name: "weapon-id", Varname: "weaponId", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
 			},
 			MethodRouteIOMap: MethodRouteIOMap{
 				"GET": RouteIO{
 					OutType: JSONObject{
 						Name: "oneWeaponOut",
+						ref:  "#/definitions/weapon",
 						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "damage", Type: JSONInteger{}},
-							{Name: "id", Type: JSONString{}},
-							{Name: "name", Type: JSONString{}},
+							{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
+							{Name: "id", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
+							{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
 						},
 					},
 				},
@@ -350,17 +364,18 @@ func TestMixedRouteParams(t *testing.T) {
 			Path: "/spells/{spell-name}",
 			Name: "spells.one",
 			RouteParams: []RouteParam{
-				{Name: "spell-name", Varname: "spellName", Type: JSONString{}},
+				{Name: "spell-name", Varname: "spellName", Type: JSONString{ref: "#/definitions/spell/definitions/name"}},
 			},
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
 					Name: "oneSpellOut",
+					ref:  "#/definitions/spell",
 					Fields: JSONFieldList{ // .Name natural sort
-						{Name: "all", Type: JSONBoolean{}},
-						{Name: "element", Type: JSONString{}},
-						{Name: "name", Type: JSONString{}},
-						{Name: "power", Type: JSONInteger{}},
+						{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
+						{Name: "element", Type: JSONString{ref: "#/definitions/spell/definitions/element"}},
+						{Name: "name", Type: JSONString{ref: "#/definitions/spell/definitions/name"}},
+						{Name: "power", Type: JSONInteger{ref: "#/definitions/spell/definitions/power"}},
 					},
 				},
 			},
@@ -369,15 +384,16 @@ func TestMixedRouteParams(t *testing.T) {
 			Path: "/locations/{location-id}",
 			Name: "locations.one",
 			RouteParams: []RouteParam{
-				{Name: "location-id", Varname: "locationId", Type: JSONInteger{}},
+				{Name: "location-id", Varname: "locationId", Type: JSONInteger{ref: "#/definitions/location/definitions/id"}},
 			},
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
 					Name: "oneLocationOut",
+					ref:  "#/definitions/location",
 					Fields: JSONFieldList{ // .Name natural sort
-						{Name: "id", Type: JSONInteger{}},
-						{Name: "name", Type: JSONString{}},
+						{Name: "id", Type: JSONInteger{ref: "#/definitions/location/definitions/id"}},
+						{Name: "name", Type: JSONString{ref: "#/definitions/location/definitions/name"}},
 					},
 				},
 			},
@@ -386,16 +402,17 @@ func TestMixedRouteParams(t *testing.T) {
 			Path: "/weapons/{weapon-id}",
 			Name: "weapons.one",
 			RouteParams: []RouteParam{
-				{Name: "weapon-id", Varname: "weaponId", Type: JSONString{}},
+				{Name: "weapon-id", Varname: "weaponId", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
 			},
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
 					Name: "oneWeaponOut",
+					ref:  "#/definitions/weapon",
 					Fields: JSONFieldList{ // .Name natural sort
-						{Name: "id", Type: JSONString{}},
-						{Name: "magical", Type: JSONBoolean{}},
-						{Name: "name", Type: JSONString{}},
+						{Name: "id", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
+						{Name: "magical", Type: JSONBoolean{ref: "#/definitions/weapon/definitions/magical"}},
+						{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
 					},
 				},
 			},
@@ -404,14 +421,15 @@ func TestMixedRouteParams(t *testing.T) {
 			Path: "/materias/{name}",
 			Name: "materias.one",
 			RouteParams: []RouteParam{
-				{Name: "name", Varname: "name", Type: JSONString{}},
+				{Name: "name", Varname: "name", Type: JSONString{ref: "name"}},
 			},
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
 					Name: "oneMateriaOut",
+					ref:  "#/definitions/materia",
 					Fields: JSONFieldList{ // .Name natural sort
-						{Name: "name", Type: JSONString{}},
+						{Name: "name", Type: JSONString{ref: "#/definitions/materia/definitions/name"}},
 					},
 				},
 			},

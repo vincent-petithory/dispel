@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"text/template"
 	"unicode"
 )
@@ -26,10 +27,13 @@ func tmpl(a asset) string {
 }
 
 type Template struct {
-	t *template.Template
+	t  *template.Template
+	sp *SchemaParser
 }
 
 func (t *Template) ExecuteTemplate(wr io.Writer, name string, ctx *TemplateContext) error {
+	ctx.writtenRefs = make(map[string]bool)
+	ctx.sp = t.sp
 	return t.t.ExecuteTemplate(wr, name, ctx)
 }
 
@@ -48,9 +52,35 @@ type TemplateContext struct {
 	Routes              Routes
 	HandlerReceiverType string
 	ExistingHandlers    []string
+
+	sp          *SchemaParser
+	writtenRefs map[string]bool
+	wrm         sync.Mutex
 }
 
-func NewTemplate() (*Template, error) {
+func (ctx *TemplateContext) DisplayType(j JSONTypeNamer) string {
+	if j.Ref() == "" {
+		return fmt.Sprintf("type %s %s", capitalize(j.TypeName()), ctx.sp.JSONToGoType(j, true))
+	}
+
+	// Keep track of written types, and don't write them twice.
+	ctx.wrm.Lock()
+	defer ctx.wrm.Unlock()
+	if ok := ctx.writtenRefs[j.Ref()]; ok {
+		return ""
+	}
+	ctx.writtenRefs[j.Ref()] = true
+	//// Don't use the name of the type; use it's ref to build it.
+	//// Strip leading #/definitions/
+	//name := strings.Replace(j.Ref(), "#/definitions/", "", 1)
+	//// Hyphenify the remaining ones
+	//// TODO allow customize this
+	//name = strings.Replace(name, "/definitions/", "-", -1)
+	//tn := symbolName(name)
+	return fmt.Sprintf("type %s %s", ctx.sp.JSONToGoType(j, false), ctx.sp.JSONToGoType(j, true))
+}
+
+func NewTemplate(sp *SchemaParser) (*Template, error) {
 	t := template.New("").Funcs(template.FuncMap{
 		"tolower":    strings.ToLower,
 		"capitalize": capitalize,
@@ -85,6 +115,7 @@ func NewTemplate() (*Template, error) {
 			}
 			return buf.String()
 		},
+		"jsonToGoType": sp.JSONToGoType,
 	})
 	for name, tmpl := range templatesMap {
 		var err error
@@ -93,5 +124,5 @@ func NewTemplate() (*Template, error) {
 			return nil, fmt.Errorf("template %s: %v", name, err)
 		}
 	}
-	return &Template{t}, nil
+	return &Template{t: t, sp: sp}, nil
 }

@@ -134,29 +134,35 @@ func (routes Routes) ByResource() ResourceRoutes {
 	return resourceRoutes
 }
 
-func (routes Routes) UniqueObjects() []JSONObject {
-	visitedObjects := make(map[string]bool)
-	var jsonObjects []JSONObject
+type JSONTypeNamer interface {
+	TypeNamer
+	JSONType
+}
+
+func (routes Routes) JSONNamedTypes() []JSONTypeNamer {
+	visited := make(map[string]bool)
+	var a []JSONTypeNamer
 	for _, route := range routes {
 		for _, typ := range []JSONType{route.InType, route.OutType} {
 			if typ == nil {
 				continue
 			}
-			jsonObject, ok := typ.(JSONObject)
+			t, ok := typ.(TypeNamer)
 			if ok {
+				tn := t.TypeName()
 				// Skip anonymous types
-				if jsonObject.Name == "" {
+				if tn == "" {
 					continue
 				}
-				if _, ok := visitedObjects[jsonObject.Name]; !ok {
-					visitedObjects[jsonObject.Name] = true
-					jsonObjects = append(jsonObjects, jsonObject)
+				if _, ok := visited[tn]; !ok {
+					visited[tn] = true
+					a = append(a, t.(JSONTypeNamer))
 				}
 				continue
 			}
 		}
 	}
-	return jsonObjects
+	return a
 }
 
 // MethodRouteIOMap maps a method to a RouteIO.
@@ -514,55 +520,97 @@ OuterLoop:
 type JSONObject struct {
 	Name   string
 	Fields JSONFieldList
+	ref    string
 }
 
 func (o JSONObject) Type() string {
-	var buf bytes.Buffer
-	_, _ = buf.WriteString("{\n")
-	for _, f := range o.Fields {
-		fmt.Fprintf(&buf, "%s %s\n", f.Name, f.Type.Type())
-	}
-	_, _ = buf.WriteString("\n}")
-	return buf.String()
+	return "object"
+}
+
+func (o JSONObject) Ref() string {
+	return o.ref
+}
+
+func (o JSONObject) TypeName() string {
+	return o.Name
 }
 
 type JSONArray struct {
 	Name  string
+	ref   string
 	Items JSONType
 }
 
 func (a JSONArray) Type() string {
-	return fmt.Sprintf("[]%s", a.Items.Type())
+	return "array"
 }
 
-type JSONString struct{}
+func (a JSONArray) Ref() string {
+	return a.ref
+}
+
+func (a JSONArray) TypeName() string {
+	return a.Name
+}
+
+type JSONString struct {
+	ref string
+}
 
 func (s JSONString) Type() string {
 	return "string"
 }
 
-type JSONBoolean struct{}
-
-func (b JSONBoolean) Type() string {
-	return "bool"
+func (s JSONString) Ref() string {
+	return s.ref
 }
 
-type JSONInteger struct{}
+type JSONBoolean struct {
+	ref string
+}
+
+func (b JSONBoolean) Type() string {
+	return "boolean"
+}
+
+func (b JSONBoolean) Ref() string {
+	return b.ref
+}
+
+type JSONInteger struct {
+	ref string
+}
 
 func (i JSONInteger) Type() string {
 	return "integer"
 }
 
-type JSONNumber struct{}
+func (i JSONInteger) Ref() string {
+	return i.ref
+}
+
+type JSONNumber struct {
+	ref string
+}
 
 func (n JSONNumber) Type() string {
 	return "number"
 }
 
-type JSONNull struct{}
+func (n JSONNumber) Ref() string {
+	return n.ref
+}
+
+type JSONNull struct {
+	ref string
+}
 
 func (n JSONNull) Type() string {
 	return "null"
+}
+
+func (n JSONNull) Ref() string {
+	return n.ref
 }
 
 type JSONField struct {
@@ -577,7 +625,57 @@ func (fl JSONFieldList) Swap(i, j int)      { fl[i], fl[j] = fl[j], fl[i] }
 func (fl JSONFieldList) Less(i, j int) bool { return fl[i].Name < fl[j].Name }
 
 type JSONType interface {
+	// Type returns a string representation of this type.
 	Type() string
+	// Ref returns the absolute reference of type as found in the JSON Schema which defined it.
+	Ref() string
+}
+
+func (sp *SchemaParser) JSONToGoType(jt JSONType, root bool) string {
+	ref := jt.Ref()
+	if ref != "" {
+		tjt, ok := sp.RefJSONTypeMap[ref]
+		if !ok {
+			log.Panicf("unregistered json type %s", ref)
+		}
+		jt = tjt
+	}
+	n, ok := jt.(TypeNamer)
+	if ok && !root {
+		if ref != "" {
+			// Don't use the name of the type; use it's ref to build it.
+			// Strip leading #/definitions/
+			name := strings.Replace(ref, "#/definitions/", "", 1)
+			// Hyphenify the remaining ones
+			// TODO allow customize this
+			name = strings.Replace(name, "/definitions/", "-", -1)
+			return symbolName(name)
+		}
+		return n.TypeName()
+	}
+	switch j := jt.(type) {
+	case JSONString:
+		return "string"
+	case JSONBoolean:
+		return "bool"
+	case JSONInteger:
+		return "int"
+	case JSONNumber:
+		return "float64"
+	case JSONObject:
+		var buf bytes.Buffer
+		_, _ = buf.WriteString("struct {\n")
+		for _, f := range j.Fields {
+			fmt.Fprintf(&buf, "%s %s `json:\"%s\"`\n", capitalize(f.Name), sp.JSONToGoType(f.Type, false), f.Name)
+		}
+		_, _ = buf.WriteString("}")
+		return buf.String()
+	case JSONArray:
+		return fmt.Sprintf("[]%s", sp.JSONToGoType(j.Items, false))
+	default:
+		log.Panicf("unhandled jsonType %#v", j)
+	}
+	return ""
 }
 
 type InvalidSchemaRefError struct {
@@ -599,8 +697,9 @@ func (e InvalidSchemaError) Error() string {
 }
 
 type SchemaParser struct {
-	RootSchema *Schema
-	Log        *log.Logger
+	RootSchema     *Schema
+	Log            *log.Logger
+	RefJSONTypeMap map[string]JSONType
 }
 
 func (sp *SchemaParser) logf(format string, v ...interface{}) {
@@ -646,14 +745,14 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 			}
 			route.RouteParams = rp
 			if link.Schema != nil {
-				inType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sIn", link.Rel, symbolName(propertyName)), link.Schema)
+				inType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sIn", link.Rel, symbolName(propertyName)), link.Schema, link.Schema.Ref)
 				if err != nil {
 					return nil, err
 				}
 				route.InType = inType
 			}
 			if link.TargetSchema != nil {
-				outType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sOut", link.Rel, symbolName(propertyName)), link.TargetSchema)
+				outType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sOut", link.Rel, symbolName(propertyName)), link.TargetSchema, link.TargetSchema.Ref)
 				if err != nil {
 					return nil, err
 				}
@@ -680,6 +779,11 @@ func (sp *SchemaParser) ResolveSchema(schema *Schema) (*Schema, error) {
 		}
 	}
 	return s, nil
+}
+
+// TypeNamer defines methods for types which are named types.
+type TypeNamer interface {
+	TypeName() string
 }
 
 // ResolveSchemaRef takes a $ref string and returns the pointed schema.
@@ -731,21 +835,32 @@ func (sp *SchemaParser) ResolveSchemaRef(schemaRef string, relSchema *Schema) (*
 
 // JSONTypeFromSchema parses a JSON Schema and returns a value satisfying the jsonType interface.
 // The name parameter, if not empty, is used to give a name to a json object.
-func (sp *SchemaParser) JSONTypeFromSchema(name string, schema *Schema) (JSONType, error) {
+func (sp *SchemaParser) JSONTypeFromSchema(name string, schema *Schema, ref string) (jt JSONType, err error) {
+	defer func() {
+		if !(err == nil && jt != nil && jt.Ref() != "") {
+			return
+		}
+		if sp.RefJSONTypeMap == nil {
+			sp.RefJSONTypeMap = make(map[string]JSONType)
+		}
+		if _, ok := sp.RefJSONTypeMap[jt.Ref()]; !ok {
+			sp.RefJSONTypeMap[jt.Ref()] = jt
+		}
+	}()
 	resSchema, err := sp.ResolveSchema(schema)
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	switch t := resSchema.Type; {
 	case t == "object" || t == "": // default value is "object"
 		var fields JSONFieldList
 		for propertyName, propertySchema := range resSchema.Properties {
-			propertySchema, err := sp.ResolveSchema(propertySchema)
+			resPropertySchema, err := sp.ResolveSchema(propertySchema)
 			if err != nil {
 				return nil, err
 			}
-			typ, err := sp.JSONTypeFromSchema(propertyName, propertySchema)
+			typ, err := sp.JSONTypeFromSchema(propertyName, resPropertySchema, propertySchema.Ref)
 			if err != nil {
 				return nil, err
 			}
@@ -755,10 +870,12 @@ func (sp *SchemaParser) JSONTypeFromSchema(name string, schema *Schema) (JSONTyp
 			})
 		}
 		sort.Sort(fields)
-		return JSONObject{
+		jt = JSONObject{
 			Name:   name,
+			ref:    ref,
 			Fields: fields,
-		}, nil
+		}
+		return
 	case t == "array":
 		items := resSchema.Items
 		if items == nil {
@@ -768,23 +885,29 @@ func (sp *SchemaParser) JSONTypeFromSchema(name string, schema *Schema) (JSONTyp
 		if err != nil {
 			return nil, err
 		}
-		jst, err := sp.JSONTypeFromSchema("", resItems)
+		jst, err := sp.JSONTypeFromSchema("", resItems, items.Ref)
 		if err != nil {
 			return nil, err
 		}
-		return JSONArray{Name: name, Items: jst}, nil
+		return JSONArray{Name: name, ref: ref, Items: jst}, nil
 	case t == "string":
-		return JSONString{}, nil
+		jt = JSONString{ref: ref}
+		return
 	case t == "boolean":
-		return JSONBoolean{}, nil
+		jt = JSONBoolean{ref: ref}
+		return
 	case t == "integer":
-		return JSONInteger{}, nil
+		jt = JSONInteger{ref: ref}
+		return
 	case t == "number":
-		return JSONNumber{}, nil
+		jt = JSONNumber{ref: ref}
+		return
 	case t == "null":
-		return JSONNull{}, nil
+		jt = JSONNull{ref: ref}
+		return
 	default:
-		return nil, InvalidSchemaError{*schema, fmt.Sprintf("unknown type %q", resSchema.Type)}
+		err = InvalidSchemaError{*schema, fmt.Sprintf("unknown type %q", resSchema.Type)}
+		return
 	}
 }
 
@@ -814,9 +937,9 @@ func (sp *SchemaParser) RouteParamsFromLink(link *Link, schema *Schema) ([]Route
 			return nil, err
 		}
 
-		// FIXME careful, we rely on absolute to construct the name here
+		// FIXME we rely on absolute $ref to construct the name here
 		names := strings.Split(v, "/")
-		typ, err := sp.JSONTypeFromSchema(names[len(names)-1], varRefSchema)
+		typ, err := sp.JSONTypeFromSchema(names[len(names)-1], varRefSchema, v)
 		if err != nil {
 			return nil, err
 		}

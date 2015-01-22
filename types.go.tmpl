@@ -2,8 +2,7 @@
 
 package {{ .PkgName }}
 
-{{ range .Routes.UniqueObjects }}type {{ .Name }} struct { {{ range .Fields }}
-{{ .Name | symbolName }} {{ .Type }} `json:"{{ .Name }}"`{{end}}
-}
+{{ $ctx := . }}
+{{ range .Routes.JSONNamedTypes }}{{ $ctx.DisplayType . }}
 
 {{end}}

@@ -72,7 +72,7 @@
             ],
             "properties": {
                 "id": {
-                    "$ref": "#/definitions/id"
+                    "$ref": "#/definitions/armor/definitions/id"
                 },
                 "name": {
                     "$ref": "#/definitions/armor/definitions/name"
@@ -139,7 +139,7 @@
             ],
             "properties": {
                 "id": {
-                    "$ref": "#/definitions/id"
+                    "$ref": "#/definitions/weapon/definitions/id"
                 },
                 "name": {
                     "$ref": "#/definitions/weapon/definitions/name"
