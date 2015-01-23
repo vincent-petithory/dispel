@@ -1,0 +1,161 @@
+{
+    "$schema": "http://json-schema.org/draft-04/hyper-schema",
+    "title": "Test API",
+    "type": "object",
+    "definitions": {
+        "character": {
+            "type": "object",
+            "definitions": {
+                "name": {
+                    "type": "string"
+                },
+                "level": {
+                    "type": "integer"
+                },
+                "spells": {
+                    "type": "array",
+		    "items": {
+			"$ref": "#/definitions/spell"
+		    }
+                }
+            },
+            "links": [
+                {
+                    "title": "Create a character",
+                    "href": "/characters",
+                    "method": "POST",
+                    "rel": "create",
+                    "schema": {
+			"properties": {
+			    "name": {
+				"type": "string"
+			    }
+			}
+                    },
+                    "targetSchema": {
+                        "$ref": "#/definitions/character"
+                    }
+                },
+                {
+                    "title": "List characters",
+                    "href": "/characters",
+                    "method": "GET",
+                    "rel": "list",
+                    "targetSchema": {
+                        "items": {
+			    "properties": {
+				"name": {
+				    "$ref": "#/definitions/character/definitions/name"
+				},
+				"level": {
+				    "$ref": "#/definitions/character/definitions/level"
+				}
+			    }
+                        },
+                        "type": "array"
+                    }
+                },
+                {
+                    "title": "Details of a character",
+                    "href": "/characters/{(#/definitions/character/definitions/name)}",
+                    "method": "GET",
+                    "rel": "one",
+                    "targetSchema": {
+                        "$ref": "#/definitions/character"
+                    }
+                },
+                {
+                    "title": "Make a character learn a spell",
+                    "href": "/characters/{(#/definitions/character/definitions/name)}/spells/{(#/definitions/spell/definitions/name)}",
+                    "method": "PUT",
+                    "rel": "link"
+                },
+                {
+                    "title": "Make a character forget a spell",
+                    "href": "/characters/{(#/definitions/character/definitions/name)}/spells/{(#/definitions/spell/definitions/name)}",
+                    "method": "DELETE",
+                    "rel": "unlink"
+                }
+            ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/character/definitions/name"
+                },
+                "level": {
+                    "$ref": "#/definitions/character/definitions/level"
+                },
+                "spells": {
+                    "$ref": "#/definitions/character/definitions/spells"
+                }
+            }
+	},
+        "spell": {
+            "type": "object",
+            "definitions": {
+                "name": {
+                    "type": "string"
+                },
+                "element": {
+                    "type": "string"
+                },
+                "power": {
+                    "type": "integer"
+                }
+            },
+            "links": [
+                {
+                    "title": "Create a spell",
+                    "href": "/spells",
+                    "method": "POST",
+                    "rel": "create",
+                    "schema": {
+                        "$ref": "#/definitions/spell"
+                    },
+                    "targetSchema": {
+                        "$ref": "#/definitions/spell"
+                    }
+                },
+                {
+                    "title": "List spells",
+                    "href": "/spells",
+                    "method": "GET",
+                    "rel": "list",
+                    "targetSchema": {
+                        "items": {
+                            "$ref": "#/definitions/spell"
+                        },
+                        "type": "array"
+                    }
+                },
+                {
+                    "title": "Info for a spell",
+                    "href": "/spells/{(#/definitions/spell/definitions/name)}",
+                    "method": "GET",
+                    "rel": "one",
+                    "targetSchema": {
+                        "$ref": "#/definitions/spell"
+                    }
+                }
+            ],
+            "properties": {
+                "name": {
+                    "$ref": "#/definitions/spell/definitions/name"
+                },
+                "element": {
+                    "$ref": "#/definitions/spell/definitions/element"
+                },
+                "power": {
+                    "$ref": "#/definitions/spell/definitions/power"
+                }
+            }
+        }
+    },
+    "properties": {
+	"character": {
+	    "$ref": "#/definitions/character"
+	},
+        "spell": {
+            "$ref": "#/definitions/spell"
+        }
+    }
+}

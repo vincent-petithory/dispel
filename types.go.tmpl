@@ -2,7 +2,6 @@
 
 package {{ .PkgName }}
 
-{{ $ctx := . }}
-{{ range .Routes.JSONNamedTypes }}{{ $ctx.DisplayType . }}
+{{ range .Routes.JSONNamedTypes }}{{ printTypeDef . }}
 
-{{end}}
+{{ end }}

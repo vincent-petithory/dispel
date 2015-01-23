@@ -28,20 +28,21 @@ type errorHTTPHandlerFunc func (http.ResponseWriter, *http.Request) (int, error)
 func registerHandlers(hr handlerRegisterer, rpg routeParamGetter, {{ varname $handlerReceiverType}} {{ $handlerReceiverType }}, hd httpDecoder, he httpEncoder, ehhf func(errorHTTPHandlerFunc) http.handler) {
 {{ range .Routes.ByResource }}    hr(route{{ symbolName .Name }}, &MethodHandler{
 {{ $route := . }}{{ range .Methods }}	{{ . | tolower | capitalize }}: ehhf(func(w http.ResponseWriter, r *http.Request) (int, error) {
-        {{ range $route.RouteParams }}{{ .Varname }}, err := rpg(w, r, "{{ .Name }}")
+    {{/*
+Get route params first, if any
+*/}}{{ range $route.RouteParams }}{{ .Varname }}, err := rpg(w, r, "{{ .Name }}")
 	if err != nil {
 		return http.StatusBadRequest, err
-	}{{end}}
-
-	{{ $io := index $route.MethodRouteIOMap . }}
-	{{ if $io.InType }}var vreq interface{}
+        }
+	{{end}}{{/*
+Decode request body if any expected
+*/}}{{ $io := index $route.MethodRouteIOMap . }}{{ if $io.InType }}var vreq {{ printTypeName $io.InType }}
 	if err := hd.Decode(w, r, &vreq); err != nil {
             return http.StatusBadRequest, err
-	}{{ end }}
-
-	status{{ if $io.OutType }}, vresp{{end}}, err := {{ varname $handlerReceiverType}}.{{ . | tolower }}{{ $route.Name | symbolName }}(w, r{{/*
+        }
+	{{ end }}status{{ if $io.OutType }}, vresp{{end}}, err := {{ varname $handlerReceiverType}}.{{ . | tolower }}{{ $route.Name | symbolName }}(w, r{{/*
 Route params and I/O types
-*/}}{{ range $route.RouteParams }}, {{ .Varname }}{{end}}{{ if $io.InType }}, vreq{{end}})
+*/}}{{ range $route.RouteParams }}, {{ .Varname }}{{end}}{{ if $io.InType }}, &vreq{{end}})
         if err != nil {
             return status, err
         }

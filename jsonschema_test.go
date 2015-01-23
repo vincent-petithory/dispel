@@ -142,7 +142,7 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			Method:      "POST",
 			RouteIO: RouteIO{
 				InType: JSONObject{
-					Name: "createSpellIn",
+					Name: "Spell",
 					ref:  "#/definitions/spell",
 					Fields: JSONFieldList{ // .Name natural sort
 						{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
@@ -152,7 +152,7 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 					},
 				},
 				OutType: JSONObject{
-					Name: "createSpellOut",
+					Name: "Spell",
 					ref:  "#/definitions/spell",
 					Fields: JSONFieldList{ // .Name natural sort
 						{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
@@ -170,10 +170,10 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			Method:      "GET",
 			RouteIO: RouteIO{
 				OutType: JSONArray{
-					Name: "listSpellOut",
+					Name: "ListSpellOut",
 					ref:  "",
 					Items: JSONObject{
-						Name: "",
+						Name: "Spell",
 						ref:  "#/definitions/spell",
 						Fields: JSONFieldList{ // .Name natural sort
 							{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
@@ -194,7 +194,7 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
-					Name: "oneSpellOut",
+					Name: "Spell",
 					ref:  "#/definitions/spell",
 					Fields: JSONFieldList{ // .Name natural sort
 						{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
@@ -224,14 +224,14 @@ func TestParseSchemaByResource(t *testing.T) {
 			MethodRouteIOMap: MethodRouteIOMap{
 				"POST": RouteIO{
 					InType: JSONObject{
-						Name: "createArmorIn",
+						Name: "CreateArmorIn",
 						Fields: JSONFieldList{ // .Name natural sort
 							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
 							{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
 						},
 					},
 					OutType: JSONObject{
-						Name: "createArmorOut",
+						Name: "Armor",
 						ref:  "#/definitions/armor",
 						Fields: JSONFieldList{ // .Name natural sort
 							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
@@ -242,9 +242,9 @@ func TestParseSchemaByResource(t *testing.T) {
 				},
 				"GET": RouteIO{
 					OutType: JSONArray{
-						Name: "listArmorOut",
+						Name: "ListArmorOut",
 						Items: JSONObject{
-							Name: "",
+							Name: "Armor",
 							ref:  "#/definitions/armor",
 							Fields: JSONFieldList{ // .Name natural sort
 								{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
@@ -265,7 +265,7 @@ func TestParseSchemaByResource(t *testing.T) {
 			MethodRouteIOMap: MethodRouteIOMap{
 				"GET": RouteIO{
 					OutType: JSONObject{
-						Name: "oneArmorOut",
+						Name: "Armor",
 						ref:  "#/definitions/armor",
 						Fields: JSONFieldList{ // .Name natural sort
 							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
@@ -276,7 +276,7 @@ func TestParseSchemaByResource(t *testing.T) {
 				},
 				"DELETE": RouteIO{
 					OutType: JSONObject{
-						Name: "deleteArmorOut",
+						Name: "Armor",
 						ref:  "#/definitions/armor",
 						Fields: JSONFieldList{ // .Name natural sort
 							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
@@ -294,7 +294,7 @@ func TestParseSchemaByResource(t *testing.T) {
 			MethodRouteIOMap: MethodRouteIOMap{
 				"POST": RouteIO{
 					InType: JSONObject{
-						Name: "createWeaponIn",
+						Name: "CreateWeaponIn",
 						ref:  "",
 						Fields: JSONFieldList{ // .Name natural sort
 							{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
@@ -302,7 +302,7 @@ func TestParseSchemaByResource(t *testing.T) {
 						},
 					},
 					OutType: JSONObject{
-						Name: "createWeaponOut",
+						Name: "Weapon",
 						ref:  "#/definitions/weapon",
 						Fields: JSONFieldList{ // .Name natural sort
 							{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
@@ -313,9 +313,9 @@ func TestParseSchemaByResource(t *testing.T) {
 				},
 				"GET": RouteIO{
 					OutType: JSONArray{
-						Name: "listWeaponOut",
+						Name: "ListWeaponOut",
 						Items: JSONObject{
-							Name: "",
+							Name: "Weapon",
 							ref:  "#/definitions/weapon",
 							Fields: JSONFieldList{ // .Name natural sort
 								{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
@@ -336,7 +336,7 @@ func TestParseSchemaByResource(t *testing.T) {
 			MethodRouteIOMap: MethodRouteIOMap{
 				"GET": RouteIO{
 					OutType: JSONObject{
-						Name: "oneWeaponOut",
+						Name: "Weapon",
 						ref:  "#/definitions/weapon",
 						Fields: JSONFieldList{ // .Name natural sort
 							{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
@@ -369,7 +369,7 @@ func TestMixedRouteParams(t *testing.T) {
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
-					Name: "oneSpellOut",
+					Name: "Spell",
 					ref:  "#/definitions/spell",
 					Fields: JSONFieldList{ // .Name natural sort
 						{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
@@ -389,7 +389,7 @@ func TestMixedRouteParams(t *testing.T) {
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
-					Name: "oneLocationOut",
+					Name: "Location",
 					ref:  "#/definitions/location",
 					Fields: JSONFieldList{ // .Name natural sort
 						{Name: "id", Type: JSONInteger{ref: "#/definitions/location/definitions/id"}},
@@ -407,7 +407,7 @@ func TestMixedRouteParams(t *testing.T) {
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
-					Name: "oneWeaponOut",
+					Name: "Weapon",
 					ref:  "#/definitions/weapon",
 					Fields: JSONFieldList{ // .Name natural sort
 						{Name: "id", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
@@ -426,7 +426,7 @@ func TestMixedRouteParams(t *testing.T) {
 			Method: "GET",
 			RouteIO: RouteIO{
 				OutType: JSONObject{
-					Name: "oneMateriaOut",
+					Name: "Materia",
 					ref:  "#/definitions/materia",
 					Fields: JSONFieldList{ // .Name natural sort
 						{Name: "name", Type: JSONString{ref: "#/definitions/materia/definitions/name"}},
