@@ -1,3 +1,9 @@
-## Limitations
+## json-pointer
 
-Only absolute `$ref` are resolved. Relative references will be treated as errors.
+* absolute, ok
+* property of instance schema, ok
+
+## templates
+
+* Detects implemented handler funcs only on one type
+
