@@ -149,10 +149,22 @@ func TestGenerateAllFromJSONSchemaAlmostCompiles(t *testing.T) {
 	}
 
 	// Write defaults
-	ok(t, ioutil.WriteFile(filepath.Join(pkgdir, "methodhandler.go"), []byte(fmt.Sprintf(dispel.MethodHandlerContent, ctx.PkgName)), 0666))
-	ok(t, ioutil.WriteFile(filepath.Join(pkgdir, "methodhandler_test.go"), []byte(fmt.Sprintf(dispel.MethodHandlerTestContent, ctx.PkgName)), 0666))
-	ok(t, ioutil.WriteFile(filepath.Join(pkgdir, "defaults_mux.go"), []byte(fmt.Sprintf(dispel.DefaultsMux, ctx.PkgName)), 0666))
-	ok(t, ioutil.WriteFile(filepath.Join(pkgdir, "defaults_codec.go"), []byte(fmt.Sprintf(dispel.DefaultsCodec, ctx.PkgName)), 0666))
+	defaultImpl, err := dispel.NewDefaultImpl()
+	ok(t, err)
+	for _, name := range defaultImpl.Names() {
+		ok(t, defaultImpl.ExecuteTemplate(&buf, name, ctx.PkgName))
+		// Format source with gofmt
+		src, err := format.Source(buf.Bytes())
+		if err != nil {
+			t.Errorf("%s\n\ngofmt: %s", buf.Bytes(), err)
+			buf.Reset()
+			continue
+		}
+
+		// Write file to disk
+		ok(t, ioutil.WriteFile(filepath.Join(pkgdir, name+".go"), src, 0666))
+		buf.Reset()
+	}
 
 	// Install deps and compile generated project
 	_, err = exec.LookPath("go")
