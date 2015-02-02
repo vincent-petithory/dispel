@@ -20,47 +20,47 @@ type Schema struct {
 	Version     string `json:"version,omitempty"`
 
 	Default  interface{} `json:"default,omitempty"`
-	ReadOnly bool        `json:"readOnly,omitempty"`
+	ReadOnly bool        `json:"readOnly,omitempty"` // unsupported
 	Example  interface{} `json:"example,omitempty"`
-	Format   string      `json:"format,omitempty"`
+	Format   string      `json:"format,omitempty"` // unsupported
 
 	Type string `json:"type,omitempty"`
 
 	Ref    string `json:"$ref,omitempty"`
-	Schema string `json:"$schema,omitempty"`
+	Schema string `json:"$schema,omitempty"` // unsupported
 
 	Definitions map[string]*Schema `json:"definitions,omitempty"`
 
-	MultipleOf       float64 `json:"multipleOf,omitempty"`
-	Maximum          float64 `json:"maximum,omitempty"`
-	ExclusiveMaximum bool    `json:"exclusiveMaximum,omitempty"`
-	Minimum          float64 `json:"minimum,omitempty"`
-	ExclusiveMinimum bool    `json:"exclusiveMinimum,omitempty"`
+	MultipleOf       float64 `json:"multipleOf,omitempty"`       // unsupported
+	Maximum          float64 `json:"maximum,omitempty"`          // unsupported
+	ExclusiveMaximum bool    `json:"exclusiveMaximum,omitempty"` // unsupported
+	Minimum          float64 `json:"minimum,omitempty"`          // unsupported
+	ExclusiveMinimum bool    `json:"exclusiveMinimum,omitempty"` // unsupported
 
-	MinLength int    `json:"minLength,omitempty"`
-	MaxLength int    `json:"maxLength,omitempty"`
-	Pattern   string `json:"pattern,omitempty"`
+	MinLength int    `json:"minLength,omitempty"` // unsupported
+	MaxLength int    `json:"maxLength,omitempty"` // unsupported
+	Pattern   string `json:"pattern,omitempty"`   // unsupported
 
-	MinProperties        int                    `json:"minProperties,omitempty"`
-	MaxProperties        int                    `json:"maxProperties,omitempty"`
-	Required             []string               `json:"required,omitempty"`
+	MinProperties        int                    `json:"minProperties,omitempty"` // unsupported
+	MaxProperties        int                    `json:"maxProperties,omitempty"` // unsupported
+	Required             []string               `json:"required,omitempty"`      // unsupported
 	Properties           map[string]*Schema     `json:"properties,omitempty"`
-	Dependencies         map[string]interface{} `json:"dependencies,omitempty"`
-	AdditionalProperties interface{}            `json:"additionalProperties,omitempty"`
-	PatternProperties    map[string]*Schema     `json:"patternProperties,omitempty"`
+	Dependencies         map[string]interface{} `json:"dependencies,omitempty"`         // unsupported
+	AdditionalProperties interface{}            `json:"additionalProperties,omitempty"` // unsupported
+	PatternProperties    map[string]*Schema     `json:"patternProperties,omitempty"`    // unsupported
 
 	Items           *Schema     `json:"items,omitempty"`
-	MinItems        int         `json:"minItems,omitempty"`
-	MaxItems        int         `json:"maxItems,omitempty"`
-	UniqueItems     bool        `json:"uniqueItems,omitempty"`
-	AdditionalItems interface{} `json:"additionalItems,omitempty"`
+	MinItems        int         `json:"minItems,omitempty"`        // unsupported
+	MaxItems        int         `json:"maxItems,omitempty"`        // unsupported
+	UniqueItems     bool        `json:"uniqueItems,omitempty"`     // unsupported
+	AdditionalItems interface{} `json:"additionalItems,omitempty"` // unsupported
 
-	Enum []string `json:"enum,omitempty"`
+	Enum []string `json:"enum,omitempty"` // unsupported
 
-	OneOf []Schema `json:"oneOf,omitempty"`
-	AnyOf []Schema `json:"anyOf,omitempty"`
-	AllOf []Schema `json:"allOf,omitempty"`
-	Not   *Schema  `json:"not,omitempty"`
+	OneOf []Schema `json:"oneOf,omitempty"` // unsupported
+	AnyOf []Schema `json:"anyOf,omitempty"` // unsupported
+	AllOf []Schema `json:"allOf,omitempty"` // unsupported
+	Not   *Schema  `json:"not,omitempty"`   // unsupported
 
 	Links []Link `json:"links,omitempty"`
 }

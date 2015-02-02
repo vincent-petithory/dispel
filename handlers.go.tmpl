@@ -3,36 +3,54 @@
 package {{ .PkgName }}
 
 import (
+	"errors"
 	"net/http"
 )
 
-type handlerRegisterer interface {
+// HandlerRegisterer is the interface implemented by objects that can register a http handler
+// for an http route.
+type HandlerRegisterer interface {
     RegisterHandler(routeName string, handler http.Handler)
 }
 
-type routeParamGetter interface {
-    GetRouteParam(w http.ResponseWriter, r *http.Request, name string) (string, error)
+// RouteParamGetter is the interface implemented by objects that can retrieve
+// the value of a parameter of a route, by name.
+type RouteParamGetter interface {
+    GetRouteParam(r *http.Request, name string) string
 }
 
-type httpEncoder interface {
-    Encode(http.ResponseWriter, *http.Request, interface{}) error
+// HTTPEncoder is the interface implemented by objects that can encode values to a http response,
+// with the specified http status.
+//
+// Implementors must handle nil data.
+type HTTPEncoder interface {
+    Encode(w http.ResponseWriter, r *http.Request, data interface{}, code int) error
 }
 
-type httpDecoder interface {
+// HTTPDecoder is the interface implemented by objects that can decode data received from a http request.
+//
+// Implementors have to close the request.Body.
+// Decode() shouldn't write to http.ResponseWriter: it's up to the caller to e.g, handle errors.
+type HTTPDecoder interface {
     Decode(http.ResponseWriter, *http.Request, interface{}) error
 }
 
-type errorHTTPHandlerFunc func (http.ResponseWriter, *http.Request) (int, error)
+// errorHTTPHandlerFunc defines the signature of the generated http handlers used in registerHandlers().
+//
+// The basic contract of this handler is it write the status code to w (and the body, if any), unless an error is returned;
+// in this case, the caller has to write to w.
+type errorHTTPHandlerFunc func (w http.ResponseWriter, r *http.Request) (status int, err error)
 
-// registerHandlers registers resource handlers for each unique named route.{{ $handlerReceiverType := .HandlerReceiverType }}
-func registerHandlers(hr handlerRegisterer, rpg routeParamGetter, {{ varname $handlerReceiverType}} {{ $handlerReceiverType }}, hd httpDecoder, he httpEncoder, ehhf func(errorHTTPHandlerFunc) http.handler) {
-{{ range .Routes.ByResource }}    hr(route{{ symbolName .Name }}, &MethodHandler{
+// registerHandlers registers resource handlers for each unique named route.
+// registerHandlers must be called after the registerRoutes().
+{{ $handlerReceiverType := .HandlerReceiverType }}func registerHandlers(hr HandlerRegisterer, rpg RouteParamGetter, {{ varname $handlerReceiverType}} {{ $handlerReceiverType }}, hd HTTPDecoder, he HTTPEncoder, ehhf func(errorHTTPHandlerFunc) http.Handler) {
+{{ range .Routes.ByResource }}    hr.RegisterHandler(route{{ symbolName .Name }}, &MethodHandler{
 {{ $route := . }}{{ range .Methods }}	{{ . | tolower | capitalize }}: ehhf(func(w http.ResponseWriter, r *http.Request) (int, error) {
     {{/*
 Get route params first, if any
-*/}}{{ range $route.RouteParams }}{{ .Varname }}, err := rpg(w, r, "{{ .Name }}")
-	if err != nil {
-		return http.StatusBadRequest, err
+*/}}{{ range $route.RouteParams }}{{ .Varname }} := rpg.GetRouteParam(r, "{{ .Name }}")
+	if {{ .Varname }} == "" {
+		return http.StatusBadRequest, errors.New("empty route parameter \"{{ .Name }}\"")
         }
 	{{end}}{{/*
 Decode request body if any expected
@@ -46,7 +64,7 @@ Route params and I/O types
         if err != nil {
             return status, err
         }
-        return status, he.Encode(w, r, vresp)
+        return status, he.Encode(w, r, {{ if $io.OutType }}vresp,{{ else }}nil,{{end}} status)
 }),
 {{end}}
 })

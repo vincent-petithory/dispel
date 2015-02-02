@@ -14,11 +14,20 @@ import (
 //go:generate asset --var=handlersTmpl handlers.go.tmpl
 //go:generate asset --var=handlerfuncsTmpl handlerfuncs.go.tmpl
 //go:generate asset --var=typesTmpl types.go.tmpl
+
 var templatesMap = map[string]string{
 	"routes":       routesTmpl,
 	"handlers":     handlersTmpl,
 	"handlerfuncs": handlerfuncsTmpl,
 	"types":        typesTmpl,
+}
+
+func TemplateNames() []string {
+	var a []string
+	for name := range templatesMap {
+		a = append(a, name)
+	}
+	return a
 }
 
 func tmpl(a asset) string {

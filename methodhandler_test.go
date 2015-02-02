@@ -8,9 +8,8 @@ import (
 
 func newRequest(tb testing.TB, method, url string) *http.Request {
 	req, err := http.NewRequest(method, url, nil)
-	ok(tb, err)
 	if err != nil {
-		panic(err)
+		tb.Fatal(err)
 	}
 	return req
 }
@@ -51,10 +50,16 @@ func TestMethodHandler(t *testing.T) {
 	for _, test := range tests {
 		rec := httptest.NewRecorder()
 		test.handler.ServeHTTP(rec, test.req)
-		equals(t, test.code, rec.Code)
-		if test.req.Method == "OPTIONS" {
-			equals(t, test.allow, rec.HeaderMap.Get("Allow"))
+		if test.code != rec.Code {
+			t.Errorf("Expected %d, got %d", test.code, rec.Code)
 		}
-		equals(t, test.body, rec.Body.String())
+		if test.req.Method == "OPTIONS" {
+			if test.allow != rec.HeaderMap.Get("Allow") {
+				t.Errorf("Expected %q, got %q", test.allow, rec.HeaderMap.Get("Allow"))
+			}
+		}
+		if test.body != rec.Body.String() {
+			t.Errorf("Expected %q, got %q", test.body, rec.Body.String())
+		}
 	}
 }

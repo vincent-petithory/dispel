@@ -6,29 +6,40 @@ import (
     "net/url"
 )
 
-type routeRegisterer interface {
+// RouteRegisterer is the interface implemented by objects that can register a name for a route path.
+type RouteRegisterer interface {
     RegisterRoute(path string, name string)
 }
 
-type routeReverser interface {
+// RouteReverser is the interface implemented by objects that can retrieve the url of a route based on
+// its registered name and the route param names and values.
+type RouteReverser interface {
     ReverseRoute(name string, params ...string) *url.URL 
 }
 
-type routeReverse struct {
-    R routeReverser
+// RouteLocation is the interface implemented by objects that can return an url for a route, using
+// a RouteReverser.
+type RouteLocation interface {
+	Location(RouteReverser) *url.URL
 }
 
 // registerRoutes uses rr to register the routes by path and name.
-func registerRoutes(rr routeRegisterer) {
+func registerRoutes(rr RouteRegisterer) {
 {{ range .Routes.ByResource }}    rr.RegisterRoute("{{ .Path }}", route{{ symbolName .Name }})
 {{end}}}
-
-{{ range .Routes.ByResource }}func (rr *routeReverse) {{ .Name | symbolName }}({{ range .RouteParams }}{{ .Varname }} string,{{end}}) *url.URL {
-    return rr.R.ReverseRoute(route{{ symbolName .Name }}, {{ range .RouteParams }}"{{ .Name }}", {{ .Varname }},{{end}})
-}
-{{end}}
 
 const (
 {{ range .Routes.ByResource }}    route{{ symbolName .Name }} = "{{ .Name }}"
 {{end}}
 )
+
+type (
+{{ range .Routes.ByResource }}    Route{{ symbolName .Name }} struct { {{ range .RouteParams }}
+    {{ symbolName .Varname }} string {{ end }}}
+{{end}}
+)
+
+{{ range .Routes.ByResource }}func (r Route{{ symbolName .Name }}) Location(rr RouteReverser) *url.URL {
+    return rr.ReverseRoute(route{{ symbolName .Name }}, {{ range .RouteParams }}"{{ .Name }}", r.{{ symbolName .Varname }},{{end}})
+}
+{{end}}

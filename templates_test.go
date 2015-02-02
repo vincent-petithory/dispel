@@ -34,35 +34,47 @@ import (
     "net/url"
 )
 
-type routeRegisterer interface {
+// RouteRegisterer is the interface implemented by objects that can register a name for a route path.
+type RouteRegisterer interface {
     RegisterRoute(path string, name string)
 }
 
-type routeReverser interface {
+// RouteReverser is the interface implemented by objects that can retrieve the url of a route based on
+// its registered name and the route param names and values.
+type RouteReverser interface {
     ReverseRoute(name string, params ...string) *url.URL 
 }
 
-type routeReverse struct {
-    R routeReverser
+// RouteLocation is the interface implemented by objects that can return an url for a route, using
+// a RouteReverser.
+type RouteLocation interface {
+	Location(RouteReverser) *url.URL
 }
 
 // registerRoutes uses rr to register the routes by path and name.
-func registerRoutes(rr routeRegisterer) {
+func registerRoutes(rr RouteRegisterer) {
     rr.RegisterRoute("/spells", routeSpells)
     rr.RegisterRoute("/spells/{spell-name}", routeSpellsOne)
-}
-
-func (rr *routeReverse) Spells() *url.URL {
-    return rr.R.ReverseRoute(routeSpells)
-}
-func (rr *routeReverse) SpellsOne(spellName string) *url.URL {
-    return rr.R.ReverseRoute(routeSpellsOne, "spell-name", spellName)
 }
 
 const (
     routeSpells = "spells"
     routeSpellsOne = "spells.one"
 )
+
+type (
+    RouteSpells struct{}
+    RouteSpellsOne struct{
+        SpellName string
+    }
+)
+
+func (r RouteSpells) Location(rr RouteReverser) *url.URL {
+    return rr.ReverseRoute(routeSpells)
+}
+func (r RouteSpellsOne) Location(rr RouteReverser) *url.URL {
+    return rr.ReverseRoute(routeSpellsOne, "spell-name", r.SpellName)
+}
 
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
@@ -96,36 +108,54 @@ func TestTemplateHandlers(t *testing.T) {
 package %s
 
 import (
+	"errors"
 	"net/http"
 )
 
-type handlerRegisterer interface {
-	RegisterHandler(routeName string, handler http.Handler)
+// HandlerRegisterer is the interface implemented by objects that can register a http handler
+// for an http route.
+type HandlerRegisterer interface {
+    RegisterHandler(routeName string, handler http.Handler)
 }
 
-type routeParamGetter interface {
-	GetRouteParam(w http.ResponseWriter, r *http.Request, name string) (string, error)
+// RouteParamGetter is the interface implemented by objects that can retrieve
+// the value of a parameter of a route, by name.
+type RouteParamGetter interface {
+    GetRouteParam(r *http.Request, name string) string
 }
 
-type httpEncoder interface {
-    Encode(http.ResponseWriter, *http.Request, interface{}) error
+// HTTPEncoder is the interface implemented by objects that can encode values to a http response,
+// with the specified http status.
+//
+// Implementors must handle nil data.
+type HTTPEncoder interface {
+    Encode(w http.ResponseWriter, r *http.Request, data interface{}, code int) error
 }
 
-type httpDecoder interface {
+// HTTPDecoder is the interface implemented by objects that can decode data received from a http request.
+//
+// Implementors have to close the request.Body.
+// Decode() shouldn't write to http.ResponseWriter: it's up to the caller to e.g, handle errors.
+type HTTPDecoder interface {
     Decode(http.ResponseWriter, *http.Request, interface{}) error
 }
 
-type errorHTTPHandlerFunc func(http.ResponseWriter, *http.Request) (int, error)
+// errorHTTPHandlerFunc defines the signature of the generated http handlers used in registerHandlers().
+//
+// The basic contract of this handler is it write the status code to w (and the body, if any), unless an error is returned;
+// in this case, the caller has to write to w.
+type errorHTTPHandlerFunc func (w http.ResponseWriter, r *http.Request) (status int, err error)
 
 // registerHandlers registers resource handlers for each unique named route.
-func registerHandlers(hr handlerRegisterer, rpg routeParamGetter, a *App, hd httpDecoder, he httpEncoder, ehhf func(errorHTTPHandlerFunc) http.handler) {
-	hr(routeSpells, &MethodHandler{
+// registerHandlers must be called after the registerRoutes().
+func registerHandlers(hr HandlerRegisterer, rpg RouteParamGetter, a *App, hd HTTPDecoder, he HTTPEncoder, ehhf func(errorHTTPHandlerFunc) http.Handler) {
+	hr.RegisterHandler(routeSpells, &MethodHandler{
 		Get: ehhf(func(w http.ResponseWriter, r *http.Request) (int, error) {
 			status, vresp, err := a.getSpells(w, r)
 			if err != nil {
 				return status, err
 			}
-			return status, he.Encode(w, r, vresp)
+			return status, he.Encode(w, r, vresp, status)
 		}),
 		Post: ehhf(func(w http.ResponseWriter, r *http.Request) (int, error) {
 			var vreq Spell
@@ -136,20 +166,20 @@ func registerHandlers(hr handlerRegisterer, rpg routeParamGetter, a *App, hd htt
 			if err != nil {
 				return status, err
 			}
-			return status, he.Encode(w, r, vresp)
+			return status, he.Encode(w, r, vresp, status)
 		}),
 	})
-	hr(routeSpellsOne, &MethodHandler{
+	hr.RegisterHandler(routeSpellsOne, &MethodHandler{
 		Get: ehhf(func(w http.ResponseWriter, r *http.Request) (int, error) {
-			spellName, err := rpg(w, r, "spell-name")
-			if err != nil {
-				return http.StatusBadRequest, err
+			spellName := rpg.GetRouteParam(r, "spell-name")
+			if spellName == "" {
+				return http.StatusBadRequest, errors.New("empty route parameter \"spell-name\"")
 			}
 			status, vresp, err := a.getSpellsOne(w, r, spellName)
 			if err != nil {
 				return status, err
 			}
-			return status, he.Encode(w, r, vresp)
+			return status, he.Encode(w, r, vresp, status)
 		}),
 	})
 }`, ctx.Prgm, ctx.PkgName)))
