@@ -156,6 +156,7 @@ func (routes Routes) walkType(typ JSONType, walkFn func(jtn JSONTypeNamer)) {
 	}
 }
 
+// JSONNamedTypes returns a list of all unique types found in the Routes.
 func (routes Routes) JSONNamedTypes() []JSONTypeNamer {
 	visited := make(map[string]bool)
 	var a []JSONTypeNamer
@@ -178,12 +179,14 @@ func (routes Routes) JSONNamedTypes() []JSONTypeNamer {
 	return a
 }
 
+// ByTypeName implements sorting by TypeName for a slice of JSONTypeNamer objects.
 type ByTypeName []JSONTypeNamer
 
 func (btn ByTypeName) Len() int           { return len(btn) }
 func (btn ByTypeName) Swap(i, j int)      { btn[i], btn[j] = btn[j], btn[i] }
 func (btn ByTypeName) Less(i, j int) bool { return btn[i].TypeName() < btn[j].TypeName() }
 
+// JSONTypeNamer combines the TypeNamer and JSONType interfaces.
 type JSONTypeNamer interface {
 	TypeNamer
 	JSONType
@@ -549,113 +552,139 @@ OuterLoop:
 
 // json types
 
+// JSONObject represents the object primitive type of the JSON format.
 type JSONObject struct {
 	Name   string
 	Fields JSONFieldList
 	ref    string
 }
 
+// Type implements Type() of the JSONType interface.
 func (o JSONObject) Type() string {
 	return "object"
 }
 
+// Ref implements Ref() of the JSONType interface.
 func (o JSONObject) Ref() string {
 	return o.ref
 }
 
+// TypeName implements the TypeNamer interface.
 func (o JSONObject) TypeName() string {
 	return o.Name
 }
 
+// JSONArray represents the array primitive type of the JSON format.
 type JSONArray struct {
 	Name  string
 	ref   string
 	Items JSONType
 }
 
+// Type implements Type() of the JSONType interface.
 func (a JSONArray) Type() string {
 	return "array"
 }
 
+// Ref implements Ref() of the JSONType interface.
 func (a JSONArray) Ref() string {
 	return a.ref
 }
 
+// TypeName implements the TypeNamer interface.
 func (a JSONArray) TypeName() string {
 	return a.Name
 }
 
+// JSONString represents the string primitive type of the JSON format.
 type JSONString struct {
 	ref string
 }
 
+// Type implements Type() of the JSONType interface.
 func (s JSONString) Type() string {
 	return "string"
 }
 
+// Ref implements Ref() of the JSONType interface.
 func (s JSONString) Ref() string {
 	return s.ref
 }
 
+// JSONBoolean represents the boolean primitive type of the JSON format.
 type JSONBoolean struct {
 	ref string
 }
 
+// Type implements Type() of the JSONType interface.
 func (b JSONBoolean) Type() string {
 	return "boolean"
 }
 
+// Ref implements Ref() of the JSONType interface.
 func (b JSONBoolean) Ref() string {
 	return b.ref
 }
 
+// JSONInteger represents the integer primitive type of the JSON format.
 type JSONInteger struct {
 	ref string
 }
 
+// Type implements Type() of the JSONType interface.
 func (i JSONInteger) Type() string {
 	return "integer"
 }
 
+// Ref implements Ref() of the JSONType interface.
 func (i JSONInteger) Ref() string {
 	return i.ref
 }
 
+// JSONNumber represents the number primitive type of the JSON format.
 type JSONNumber struct {
 	ref string
 }
 
+// Type implements Type() of the JSONType interface.
 func (n JSONNumber) Type() string {
 	return "number"
 }
 
+// Ref implements Ref() of the JSONType interface.
 func (n JSONNumber) Ref() string {
 	return n.ref
 }
 
+// JSONNull represents the null primitive type of the JSON format.
 type JSONNull struct {
 	ref string
 }
 
+// Type implements Type() of the JSONType interface.
 func (n JSONNull) Type() string {
 	return "null"
 }
 
+// Ref implements Ref() of the JSONType interface.
 func (n JSONNull) Ref() string {
 	return n.ref
 }
 
+// JSONField represents one property of a JSONObject.
 type JSONField struct {
 	Name string
 	Type JSONType
 }
 
+// JSONFieldList implements alphabetical sorting of a JSONObject property list.
 type JSONFieldList []JSONField
 
 func (fl JSONFieldList) Len() int           { return len(fl) }
 func (fl JSONFieldList) Swap(i, j int)      { fl[i], fl[j] = fl[j], fl[i] }
 func (fl JSONFieldList) Less(i, j int) bool { return fl[i].Name < fl[j].Name }
 
+// JSONType is the interface implemented by objects that represents a JSON type defined in a JSON Schema.
 type JSONType interface {
 	// Type returns a string representation of this type.
 	Type() string
@@ -663,6 +692,9 @@ type JSONType interface {
 	Ref() string
 }
 
+// JSONToGoType prints Go source code for the JSONType.
+// globalScope tells whether we are in the package scope of the go source file,
+// or inside a type.
 func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
 	ref := jt.Ref()
 	if ref != "" {
@@ -706,6 +738,8 @@ func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
 	return ""
 }
 
+// InvalidSchemaRefError represents an error which happens when an invalid $ref is found in a JSON Schema.
+// Typically, it's a $ref which is unsupported or can't be dereferenced.
 type InvalidSchemaRefError struct {
 	Ref string
 	Msg string
@@ -715,6 +749,7 @@ func (e InvalidSchemaRefError) Error() string {
 	return fmt.Sprintf("invalid $ref %q: %s", string(e.Ref), e.Msg)
 }
 
+// InvalidSchemaError represents an error which happens when parsing a (sub)schema fails.
 type InvalidSchemaError struct {
 	Schema Schema
 	Msg    string
@@ -724,6 +759,9 @@ func (e InvalidSchemaError) Error() string {
 	return string(e.Msg)
 }
 
+// SchemaParser provides a parser for a Schema instance.
+//
+// It allows to parse its routes and data structures.
 type SchemaParser struct {
 	RootSchema     *Schema
 	Log            *log.Logger
@@ -736,6 +774,7 @@ func (sp *SchemaParser) logf(format string, v ...interface{}) {
 	}
 }
 
+// ParseRoutes parses the Schema and returns a list of Route instances.
 func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 	if sp.RootSchema == nil {
 		return nil, InvalidSchemaError{Schema{}, "no schema provided"}

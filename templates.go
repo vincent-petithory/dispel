@@ -22,6 +22,8 @@ var templatesMap = map[string]string{
 	"types":        typesTmpl,
 }
 
+// TemplateNames returns the same list than Template.Names(), but doesn't require
+// to create a Template instance.
 func TemplateNames() []string {
 	var a []string
 	for name := range templatesMap {
@@ -34,16 +36,19 @@ func tmpl(a asset) string {
 	return a.Content
 }
 
+// Template represents a bundle of templates for generating the various dispel API source files.
 type Template struct {
 	t  *template.Template
 	sp *SchemaParser
 }
 
+// ExecuteTemplate executes the template named by name, using the ctx TemplateContext.
 func (t *Template) ExecuteTemplate(wr io.Writer, name string, ctx *TemplateContext) error {
 	ctx.sp = t.sp
 	return t.t.ExecuteTemplate(wr, name, ctx)
 }
 
+// Names returns the list of templates available in the Template bundle.
 func (t *Template) Names() []string {
 	var a []string
 	for _, tmpl := range t.t.Templates() {
@@ -63,6 +68,7 @@ type TemplateContext struct {
 	sp *SchemaParser
 }
 
+// NewTemplate returns a new Template based on the SchemaParser.
 func NewTemplate(sp *SchemaParser) (*Template, error) {
 	t := template.New("").Funcs(template.FuncMap{
 		"tolower":    strings.ToLower,

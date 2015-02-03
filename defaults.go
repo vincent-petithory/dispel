@@ -55,10 +55,13 @@ var defaultsMap = map[string]string{
 	"defaults_codec":     defaultsCodec,
 }
 
+// DefaultImpl represents a bundle of source files
+// providing default implementations for dispel's interfaces.
 type DefaultImpl struct {
 	t *template.Template
 }
 
+// NewDefaultImpl returns a new DefaultImpl bundle.
 func NewDefaultImpl() (*DefaultImpl, error) {
 	t := template.New("_")
 	for name, tmpl := range defaultsMap {
@@ -71,6 +74,10 @@ func NewDefaultImpl() (*DefaultImpl, error) {
 	return &DefaultImpl{t: t}, nil
 }
 
+// ExecuteTemplate writes the source file named by name to the writer wr.
+//
+// The name must be one of those returned by DefaultImpl.Names().
+// It sets the package of the generated source file to pkgName.
 func (d *DefaultImpl) ExecuteTemplate(wr io.Writer, name string, pkgName string) error {
 	return d.t.ExecuteTemplate(wr, name, &struct {
 		PkgName string
@@ -79,6 +86,7 @@ func (d *DefaultImpl) ExecuteTemplate(wr io.Writer, name string, pkgName string)
 	})
 }
 
+// Names returns the list of available default implementations.
 func (d *DefaultImpl) Names() []string {
 	var a []string
 	for _, tmpl := range d.t.Templates() {
@@ -87,6 +95,8 @@ func (d *DefaultImpl) Names() []string {
 	return a
 }
 
+// DefaultNames returns the same list than DefaultImpl.Names(), but doesn't require
+// to create a DefaultImpl instance.
 func DefaultNames() []string {
 	var a []string
 	for name := range defaultsMap {
