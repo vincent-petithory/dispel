@@ -17,7 +17,6 @@ import (
 )
 
 var (
-	schemaFilepath      string
 	templateName        string
 	defaultImplName     string
 	prefix              string
@@ -98,6 +97,13 @@ func main() {
 	genPathFn := func(name string) string {
 		return filepath.Join(pkgAbsPath, fmt.Sprintf("%s%s.go", prefix, strings.ToLower(name)))
 	}
+
+	// Setting the json schema path is mandatory
+	if flag.NArg() < 1 {
+		flag.Usage()
+		log.Fatal("no jsonschema file provided")
+	}
+	schemaFilepath := flag.Arg(0)
 
 	// Parse JSON Schema
 	schemaParser, err := parseSchema(schemaFilepath)
