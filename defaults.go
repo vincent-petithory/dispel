@@ -1,10 +1,12 @@
 package dispel
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"go/format"
 	"io"
-	"regexp"
+	"strings"
 	"text/template"
 )
 
@@ -14,14 +16,36 @@ import (
 //go:generate asset --var=defaultsMux --wrap=gofmtTmpl defaults_mux.go
 //go:generate asset --var=defaultsCodec --wrap=gofmtTmpl defaults_codec.go
 
-var pkgDeclRegexp = regexp.MustCompile(`^package .+`)
-
 func gofmtTmpl(a asset) string {
 	b, err := format.Source([]byte(a.Content))
 	if err != nil {
 		panic(err)
 	}
-	return pkgDeclRegexp.ReplaceAllString(string(b), "package {{ .PkgName }}")
+	// Remove build tags and prepare package template
+	var buf bytes.Buffer
+	scanner := bufio.NewScanner(bytes.NewReader(b))
+	scanner.Split(bufio.ScanLines)
+	var skipNextLine bool
+	for scanner.Scan() {
+		if skipNextLine {
+			skipNextLine = false
+			continue
+		}
+		text := scanner.Text()
+		if strings.HasPrefix(text, "// +build") {
+			skipNextLine = true
+			continue
+		}
+		if strings.HasPrefix(text, "package ") {
+			_, _ = fmt.Fprintln(&buf, "package {{ .PkgName }}")
+			continue
+		}
+		_, _ = fmt.Fprintln(&buf, text)
+	}
+	if err := scanner.Err(); err != nil {
+		panic(err)
+	}
+	return buf.String()
 }
 
 var defaultsMap = map[string]string{
