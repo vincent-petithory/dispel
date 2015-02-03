@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"go/format"
 	"io"
 	"io/ioutil"
 	"log"
@@ -17,8 +18,6 @@ import (
 	"syscall"
 	"testing"
 	"time"
-
-	"go/format"
 
 	"github.com/vincent-petithory/dispel"
 )
@@ -50,10 +49,21 @@ func equals(tb testing.TB, expected, actual interface{}) {
 	}
 }
 
-func TestGenerateAllFromJSONSchemaAlmostCompiles(t *testing.T) {
+func TestGenerateAllFromJSONSchemaNoUserImplWithAPI(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test")
 	}
+	generateAllFromJSONSchemaNoUserImpl(t, installWithDispelAPI)
+}
+
+func TestGenerateAllFromJSONSchemaNoUserImplWithCmd(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+	generateAllFromJSONSchemaNoUserImpl(t, installWithDispelCmd)
+}
+
+func generateAllFromJSONSchemaNoUserImpl(t *testing.T, installFn func(tb testing.TB, destdir string)) {
 	tmpdir, err := ioutil.TempDir("", "dispel-")
 	if err != nil {
 		t.Fatal(err)
@@ -107,64 +117,7 @@ func TestGenerateAllFromJSONSchemaAlmostCompiles(t *testing.T) {
 	}))
 	pkgdir := filepath.Join(tmpdir, "src", "rpg")
 
-	var schema dispel.Schema
-	f, err := os.Open(filepath.Join(pkgdir, "schema.json"))
-	ok(t, err)
-	defer f.Close()
-
-	ok(t, json.NewDecoder(f).Decode(&schema))
-
-	sp := &dispel.SchemaParser{RootSchema: &schema}
-	routes, err := sp.ParseRoutes()
-	ok(t, err)
-
-	tmpl, err := dispel.NewTemplate(sp)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ctx := &dispel.TemplateContext{
-		Prgm:                "dispel",
-		PkgName:             "main",
-		Routes:              routes,
-		HandlerReceiverType: "*App",
-		ExistingHandlers:    []string{},
-	}
-
-	// Exec templates
-	var buf bytes.Buffer
-	for _, name := range tmpl.Names() {
-		ok(t, tmpl.ExecuteTemplate(&buf, name, ctx))
-		// Format source with gofmt
-		src, err := format.Source(buf.Bytes())
-		if err != nil {
-			t.Errorf("%s\n\ngofmt: %s", buf.Bytes(), err)
-			buf.Reset()
-			continue
-		}
-
-		// Write file to disk
-		ok(t, ioutil.WriteFile(filepath.Join(pkgdir, fmt.Sprintf("dispel_%s.go", name)), src, 0666))
-		buf.Reset()
-	}
-
-	// Write defaults
-	defaultImpl, err := dispel.NewDefaultImpl()
-	ok(t, err)
-	for _, name := range defaultImpl.Names() {
-		ok(t, defaultImpl.ExecuteTemplate(&buf, name, ctx.PkgName))
-		// Format source with gofmt
-		src, err := format.Source(buf.Bytes())
-		if err != nil {
-			t.Errorf("%s\n\ngofmt: %s", buf.Bytes(), err)
-			buf.Reset()
-			continue
-		}
-
-		// Write file to disk
-		ok(t, ioutil.WriteFile(filepath.Join(pkgdir, name+".go"), src, 0666))
-		buf.Reset()
-	}
+	installFn(t, pkgdir)
 
 	// Install deps and compile generated project
 	_, err = exec.LookPath("go")
@@ -243,5 +196,89 @@ func TestGenerateAllFromJSONSchemaAlmostCompiles(t *testing.T) {
 	}()
 	if err := cmd.Wait(); err != nil {
 		t.Error(serverBuf.String())
+	}
+}
+
+func installWithDispelAPI(tb testing.TB, pkgdir string) {
+	var schema dispel.Schema
+	f, err := os.Open(filepath.Join(pkgdir, "schema.json"))
+	ok(tb, err)
+	defer f.Close()
+
+	ok(tb, json.NewDecoder(f).Decode(&schema))
+
+	sp := &dispel.SchemaParser{RootSchema: &schema}
+	routes, err := sp.ParseRoutes()
+	ok(tb, err)
+
+	tmpl, err := dispel.NewTemplate(sp)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx := &dispel.TemplateContext{
+		Prgm:                "dispel",
+		PkgName:             "main",
+		Routes:              routes,
+		HandlerReceiverType: "*App",
+		ExistingHandlers:    []string{},
+	}
+
+	// Exec templates
+	var buf bytes.Buffer
+	for _, name := range tmpl.Names() {
+		ok(tb, tmpl.ExecuteTemplate(&buf, name, ctx))
+		// Format source with gofmt
+		src, err := format.Source(buf.Bytes())
+		if err != nil {
+			tb.Errorf("%s\n\ngofmt: %s", buf.Bytes(), err)
+			buf.Reset()
+			continue
+		}
+
+		// Write file to disk
+		ok(tb, ioutil.WriteFile(filepath.Join(pkgdir, fmt.Sprintf("dispel_%s.go", name)), src, 0666))
+		buf.Reset()
+	}
+
+	// Write defaults
+	defaultImpl, err := dispel.NewDefaultImpl()
+	ok(tb, err)
+	for _, name := range defaultImpl.Names() {
+		ok(tb, defaultImpl.ExecuteTemplate(&buf, name, ctx.PkgName))
+		// Format source with gofmt
+		src, err := format.Source(buf.Bytes())
+		if err != nil {
+			tb.Errorf("%s\n\ngofmt: %s", buf.Bytes(), err)
+			buf.Reset()
+			continue
+		}
+
+		// Write file to disk
+		ok(tb, ioutil.WriteFile(filepath.Join(pkgdir, name+".go"), src, 0666))
+		buf.Reset()
+	}
+}
+
+func installWithDispelCmd(tb testing.TB, pkgdir string) {
+	installCmd := exec.Command("go", "install", "-v", "github.com/vincent-petithory/dispel/...")
+	out, err := installCmd.CombinedOutput()
+	if err != nil {
+		tb.Fatalf("%s\n\ngo install: %v", string(out), err)
+	}
+
+	_, err = exec.LookPath("dispel")
+	ok(tb, err)
+
+	dispelCmd := exec.Command(
+		"dispel",
+		"--handler-receiver-type=*App",
+		"--pkgname=main",
+		fmt.Sprintf("--pkgpath=%s", pkgdir),
+		filepath.Join(pkgdir, "schema.json"),
+	)
+	out, err = dispelCmd.CombinedOutput()
+	if err != nil {
+		tb.Fatalf("%s\n\ndispel: %v", string(out), err)
 	}
 }
