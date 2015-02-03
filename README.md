@@ -1,5 +1,7 @@
 ## Dispel [![GoDoc](https://godoc.org/github.com/vincent-petithory/dispel?status.png)](https://godoc.org/github.com/vincent-petithory/dispel)
 
+[![Build Status](https://travis-ci.org/vincent-petithory/dispel.svg?branch=master)](https://travis-ci.org/vincent-petithory/dispel)
+
 This project aims to generate server code for REST APIs written in Go, based on a JSON Schema describing the API.
 
 Though already usable, this is still a work in progress and APIs are unstable.
