@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"go/build"
 	"go/format"
 	"io/ioutil"
 	"log"
@@ -22,6 +21,7 @@ var (
 	prefix              string
 	handlerReceiverType string
 	pkgpath             string
+	pkgname             string
 )
 
 func init() {
@@ -36,6 +36,8 @@ func init() {
 	flag.StringVar(&handlerReceiverType, "handler-receiver-type", "", "the type which will receive the handler funcs.")
 	flag.StringVar(&pkgpath, "pkgpath", "", `Generate and analyze code in this package. It is mandatory to set a value if not invoked with go:generate.
         If set when the program is invoked by go:generate, it overrides the package path resolved from $GOFILE.`)
+	flag.StringVar(&pkgname, "pkgname", "", `The package name to use at the pkgpath location. It is mandatory to set a value if not invoked with go:generate.
+        If set when the program is invoked by go:generate, it overrides the value of $GOPACKAGE`)
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: dispel SCHEMA")
 		fmt.Fprintln(os.Stderr)
@@ -82,15 +84,21 @@ func main() {
 		}
 		pkgAbsPath = filepath.Dir(p)
 	default:
+		flag.Usage()
 		log.Fatal("no package found: $GOFILE or --pkgpath must be set")
 	}
-
-	// Setting the json schema path is mandatory
-	if schemaFilepath == "" {
-		log.Fatal("no jsonschema file provided")
+	switch {
+	case pkgname != "":
+	case os.Getenv("GOPACKAGE") != "":
+		pkgname = os.Getenv("GOPACKAGE")
+	default:
+		flag.Usage()
+		log.Fatal("no package name found: $GOPACKAGE or --pkgname must be set")
 	}
+
 	// Abort if the generated files' prefix is empty
 	if prefix == "" {
+		flag.Usage()
 		log.Fatal("generated files need a non-empty prefix")
 	}
 
@@ -123,15 +131,9 @@ func main() {
 		genFiles = append(genFiles, genPathFn(tmplName))
 	}
 
-	// Resolve the pkg from the pkg path
-	goPkg, err := build.ImportDir(pkgAbsPath, build.FindOnly)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	// Find methods whose receiver's type is the one defined as holding handler funcs implementations
 	// We exclude the ones we auto-generate.
-	handlerFuncDecls, err := dispel.FindTypesFuncs(pkgAbsPath, goPkg.Name, []string{strings.Replace(handlerReceiverType, "*", "", -1)}, genFiles)
+	handlerFuncDecls, err := dispel.FindTypesFuncs(pkgAbsPath, pkgname, []string{strings.Replace(handlerReceiverType, "*", "", -1)}, genFiles)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -154,7 +156,7 @@ func main() {
 	// Prepare context for template
 	ctx := &dispel.TemplateContext{
 		Prgm:                strings.Join(append([]string{prgmName}, os.Args[1:]...), " "),
-		PkgName:             goPkg.Name,
+		PkgName:             pkgname,
 		Routes:              routes,
 		HandlerReceiverType: handlerReceiverType,
 		ExistingHandlers:    existingHandlers,
