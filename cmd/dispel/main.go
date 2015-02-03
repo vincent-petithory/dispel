@@ -25,21 +25,14 @@ var (
 )
 
 func init() {
-	flag.StringVar(&templateName, "template", "all", fmt.Sprintf(`execute this template only.
-        It must be one of %q. If empty, noone is executed.
-        If set to the special value all (the default), all templates are executed.`, dispel.TemplateNames()))
-	flag.StringVar(&defaultImplName, "default-impl", "all", fmt.Sprintf(`execute this default impl only.
-        It must be one of %q. If empty, noone is executed.
-        If set to the special value all, all default impls are executed.`, dispel.DefaultNames()))
-	flag.StringVar(&prefix, "prefix", "dispel_", `the prefix to use for each generated template file.
-        This doesn't apply to default implementations, which have fixed names.`)
-	flag.StringVar(&handlerReceiverType, "handler-receiver-type", "", "the type which will receive the handler funcs.")
-	flag.StringVar(&pkgpath, "pkgpath", "", `Generate and analyze code in this package. It is mandatory to set a value if not invoked with go:generate.
-        If set when the program is invoked by go:generate, it overrides the package path resolved from $GOFILE.`)
-	flag.StringVar(&pkgname, "pkgname", "", `The package name to use at the pkgpath location. It is mandatory to set a value if not invoked with go:generate.
-        If set when the program is invoked by go:generate, it overrides the value of $GOPACKAGE`)
+	flag.StringVar(&templateName, "template", "all", fmt.Sprintf("\t\tExecute this template only.\n\t\t\t\tIt must be one of %q. If empty, noone is executed.\n\t\t\t\tIf set to the special value all (the default), all templates are executed.", dispel.TemplateNames()))
+	flag.StringVar(&defaultImplName, "default-impl", "all", fmt.Sprintf("\t\tExecute this default impl only.\n\t\t\t\tIt must be one of %q. If empty, noone is executed.\n\t\t\t\tIf set to the special value all, all default impls are executed.", dispel.DefaultNames()))
+	flag.StringVar(&prefix, "prefix", "dispel_", "\t\tThe prefix to use for each generated template file.\n\t\t\t\tThis doesn't apply to default implementations, which have fixed names.")
+	flag.StringVar(&handlerReceiverType, "handler-receiver-type", "", "\tThe type which will receive the handler funcs.")
+	flag.StringVar(&pkgpath, "pkgpath", "", "\t\t\tGenerate and analyze code in this package. It is mandatory to set a value if not invoked with go:generate.\n\t\t\t\tIf set when the program is invoked by go:generate, it overrides the package path resolved from $GOFILE.")
+	flag.StringVar(&pkgname, "pkgname", "", "\t\t\tThe package name to use at the pkgpath location. It is mandatory to set a value if not invoked with go:generate.\n\t\t\t\tIf set when the program is invoked by go:generate, it overrides the value of $GOPACKAGE")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage: dispel SCHEMA")
+		fmt.Fprintln(os.Stderr, "Usage: dispel [OPTION]... SCHEMA")
 		fmt.Fprintln(os.Stderr)
 		flag.PrintDefaults()
 	}
