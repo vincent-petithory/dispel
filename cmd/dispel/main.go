@@ -26,7 +26,7 @@ var (
 
 func init() {
 	flag.StringVar(&templateName, "template", "all", fmt.Sprintf("\t\tExecute this template only.\n\t\t\t\tIt must be one of %q. If empty, noone is executed.\n\t\t\t\tIf set to the special value all (the default), all templates are executed.", dispel.TemplateNames()))
-	flag.StringVar(&defaultImplName, "default-impl", "all", fmt.Sprintf("\t\tExecute this default impl only.\n\t\t\t\tIt must be one of %q. If empty, noone is executed.\n\t\t\t\tIf set to the special value all, all default impls are executed.", dispel.DefaultNames()))
+	flag.StringVar(&defaultImplName, "default-impl", "all", fmt.Sprintf("\t\tExecute this default impl only.\n\t\t\t\tIt must be one of %q. If empty, noone is executed.\n\t\t\t\tIf set to the special value all, all default impls are executed.", dispel.DefaultImplNames()))
 	flag.StringVar(&prefix, "prefix", "dispel_", "\t\tThe prefix to use for each generated template file.\n\t\t\t\tThis doesn't apply to default implementations, which have fixed names.")
 	flag.StringVar(&handlerReceiverType, "handler-receiver-type", "", "\tThe type which will receive the handler funcs.")
 	flag.StringVar(&pkgpath, "pkgpath", "", "\t\t\tGenerate and analyze code in this package. It is mandatory to set a value if not invoked with go:generate.\n\t\t\t\tIf set when the program is invoked by go:generate, it overrides the package path resolved from $GOFILE.")
@@ -113,7 +113,7 @@ func main() {
 	}
 
 	// Create dispel template using the parser
-	t, err := dispel.NewTemplate(schemaParser)
+	t, err := dispel.NewTemplateBundle(schemaParser)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -177,7 +177,7 @@ func main() {
 		buf.Reset()
 	}
 
-	defaultImpl, err := dispel.NewDefaultImpl()
+	defaultImpl, err := dispel.NewDefaultImplBundle()
 	if err != nil {
 		log.Fatal(err)
 	}

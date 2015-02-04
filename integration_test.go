@@ -211,7 +211,7 @@ func installWithDispelAPI(tb testing.TB, pkgdir string) {
 	routes, err := sp.ParseRoutes()
 	ok(tb, err)
 
-	tmpl, err := dispel.NewTemplate(sp)
+	tmpl, err := dispel.NewTemplateBundle(sp)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -242,7 +242,7 @@ func installWithDispelAPI(tb testing.TB, pkgdir string) {
 	}
 
 	// Write defaults
-	defaultImpl, err := dispel.NewDefaultImpl()
+	defaultImpl, err := dispel.NewDefaultImplBundle()
 	ok(tb, err)
 	for _, name := range defaultImpl.Names() {
 		ok(tb, defaultImpl.ExecuteTemplate(&buf, name, ctx.PkgName))

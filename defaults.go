@@ -48,37 +48,45 @@ func gofmtTmpl(a asset) string {
 	return buf.String()
 }
 
-var defaultsMap = map[string]string{
-	"methodhandler":      methodHandler,
-	"methodhandler_test": methodHandlerTest,
-	"defaults_mux":       defaultsMux,
-	"defaults_codec":     defaultsCodec,
+var defaultImplsMap = map[string]string{
+	DefaultImplMethodHandler:     methodHandler,
+	DefaultImplMethodHandlerTest: methodHandlerTest,
+	DefaultImplMux:               defaultsMux,
+	DefaultImplCodec:             defaultsCodec,
 }
 
-// DefaultImpl represents a bundle of source files
+// The default implementations available in a DefaultImplBundle.
+const (
+	DefaultImplMethodHandler     = "methodhandler"
+	DefaultImplMethodHandlerTest = "methodhandler_test"
+	DefaultImplMux               = "defaults_mux"
+	DefaultImplCodec             = "defaults_codec"
+)
+
+// DefaultImplBundle represents a bundle of source files
 // providing default implementations for dispel's interfaces.
-type DefaultImpl struct {
+type DefaultImplBundle struct {
 	t *template.Template
 }
 
-// NewDefaultImpl returns a new DefaultImpl bundle.
-func NewDefaultImpl() (*DefaultImpl, error) {
+// NewDefaultImplBundle returns a new DefaultImplBundle bundle.
+func NewDefaultImplBundle() (*DefaultImplBundle, error) {
 	t := template.New("_")
-	for name, tmpl := range defaultsMap {
+	for name, tmpl := range defaultImplsMap {
 		var err error
 		t, err = t.New(name).Parse(tmpl)
 		if err != nil {
 			return nil, fmt.Errorf("defaultImpl %s: %v", name, err)
 		}
 	}
-	return &DefaultImpl{t: t}, nil
+	return &DefaultImplBundle{t: t}, nil
 }
 
 // ExecuteTemplate writes the source file named by name to the writer wr.
 //
 // The name must be one of those returned by DefaultImpl.Names().
 // It sets the package of the generated source file to pkgName.
-func (d *DefaultImpl) ExecuteTemplate(wr io.Writer, name string, pkgName string) error {
+func (d *DefaultImplBundle) ExecuteTemplate(wr io.Writer, name string, pkgName string) error {
 	return d.t.ExecuteTemplate(wr, name, &struct {
 		PkgName string
 	}{
@@ -87,7 +95,7 @@ func (d *DefaultImpl) ExecuteTemplate(wr io.Writer, name string, pkgName string)
 }
 
 // Names returns the list of available default implementations.
-func (d *DefaultImpl) Names() []string {
+func (d *DefaultImplBundle) Names() []string {
 	var a []string
 	for _, tmpl := range d.t.Templates() {
 		a = append(a, tmpl.Name())
@@ -95,11 +103,11 @@ func (d *DefaultImpl) Names() []string {
 	return a
 }
 
-// DefaultNames returns the same list than DefaultImpl.Names(), but doesn't require
+// DefaultImplNames returns the same list than DefaultImpl.Names(), but doesn't require
 // to create a DefaultImpl instance.
-func DefaultNames() []string {
+func DefaultImplNames() []string {
 	var a []string
-	for name := range defaultsMap {
+	for name := range defaultImplsMap {
 		a = append(a, name)
 	}
 	return a

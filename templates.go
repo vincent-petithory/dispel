@@ -16,13 +16,21 @@ import (
 //go:generate asset --var=typesTmpl types.go.tmpl
 
 var templatesMap = map[string]string{
-	"routes":       routesTmpl,
-	"handlers":     handlersTmpl,
-	"handlerfuncs": handlerfuncsTmpl,
-	"types":        typesTmpl,
+	TemplateRoutes:       routesTmpl,
+	TemplateHandlers:     handlersTmpl,
+	TemplateHandlerfuncs: handlerfuncsTmpl,
+	TemplateTypes:        typesTmpl,
 }
 
-// TemplateNames returns the same list than Template.Names(), but doesn't require
+// The templates available in a TemplateBundle.
+const (
+	TemplateRoutes       = "routes"
+	TemplateHandlers     = "handlers"
+	TemplateHandlerfuncs = "handlerfuncs"
+	TemplateTypes        = "types"
+)
+
+// TemplateNames returns the same list than TemplateBundle.Names(), but doesn't require
 // to create a Template instance.
 func TemplateNames() []string {
 	var a []string
@@ -36,20 +44,20 @@ func tmpl(a asset) string {
 	return a.Content
 }
 
-// Template represents a bundle of templates for generating the various dispel API source files.
-type Template struct {
+// TemplateBundle represents a bundle of templates for generating the various dispel API source files.
+type TemplateBundle struct {
 	t  *template.Template
 	sp *SchemaParser
 }
 
 // ExecuteTemplate executes the template named by name, using the ctx TemplateContext.
-func (t *Template) ExecuteTemplate(wr io.Writer, name string, ctx *TemplateContext) error {
+func (t *TemplateBundle) ExecuteTemplate(wr io.Writer, name string, ctx *TemplateContext) error {
 	ctx.sp = t.sp
 	return t.t.ExecuteTemplate(wr, name, ctx)
 }
 
 // Names returns the list of templates available in the Template bundle.
-func (t *Template) Names() []string {
+func (t *TemplateBundle) Names() []string {
 	var a []string
 	for _, tmpl := range t.t.Templates() {
 		a = append(a, tmpl.Name())
@@ -68,8 +76,8 @@ type TemplateContext struct {
 	sp *SchemaParser
 }
 
-// NewTemplate returns a new Template based on the SchemaParser.
-func NewTemplate(sp *SchemaParser) (*Template, error) {
+// NewTemplateBundle returns a new Template based on the SchemaParser.
+func NewTemplateBundle(sp *SchemaParser) (*TemplateBundle, error) {
 	t := template.New("").Funcs(template.FuncMap{
 		"tolower":    strings.ToLower,
 		"capitalize": capitalize,
@@ -125,5 +133,5 @@ func NewTemplate(sp *SchemaParser) (*Template, error) {
 			return nil, fmt.Errorf("template %s: %v", name, err)
 		}
 	}
-	return &Template{t: t, sp: sp}, nil
+	return &TemplateBundle{t: t, sp: sp}, nil
 }

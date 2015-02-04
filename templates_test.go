@@ -8,7 +8,7 @@ import (
 )
 
 func TestTemplateCompiles(t *testing.T) {
-	_, err := NewTemplate(&SchemaParser{})
+	_, err := NewTemplateBundle(&SchemaParser{})
 	ok(t, err)
 }
 
@@ -79,7 +79,7 @@ func (r RouteSpellsOne) Location(rr RouteReverser) *url.URL {
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplate(sp)
+	tmpl, err := NewTemplateBundle(sp)
 	ok(t, err)
 
 	var buf bytes.Buffer
@@ -185,7 +185,7 @@ func registerHandlers(hr HandlerRegisterer, rpg RouteParamGetter, a *App, hd HTT
 }`, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplate(sp)
+	tmpl, err := NewTemplateBundle(sp)
 	ok(t, err)
 
 	var buf bytes.Buffer
@@ -235,7 +235,7 @@ func (a *App) getSpellsOne(w http.ResponseWriter, r *http.Request, spellName str
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplate(sp)
+	tmpl, err := NewTemplateBundle(sp)
 	ok(t, err)
 
 	var buf bytes.Buffer
@@ -277,7 +277,7 @@ type Spell struct {
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplate(sp)
+	tmpl, err := NewTemplateBundle(sp)
 	ok(t, err)
 
 	var buf bytes.Buffer
@@ -338,7 +338,7 @@ type Spell struct {
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplate(sp)
+	tmpl, err := NewTemplateBundle(sp)
 	ok(t, err)
 
 	var buf bytes.Buffer
