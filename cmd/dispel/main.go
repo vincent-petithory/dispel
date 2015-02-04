@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	templateName        string
-	defaultImplName     string
+	templateNameList    string
+	defaultImplNameList string
 	prefix              string
 	handlerReceiverType string
 	pkgpath             string
@@ -25,8 +25,8 @@ var (
 )
 
 func init() {
-	flag.StringVar(&templateName, "template", "all", fmt.Sprintf("\t\tExecute this template only.\n\t\t\t\tIt must be one of %q. If empty, noone is executed.\n\t\t\t\tIf set to the special value all (the default), all templates are executed.", dispel.TemplateNames()))
-	flag.StringVar(&defaultImplName, "default-impl", "all", fmt.Sprintf("\t\tExecute this default impl only.\n\t\t\t\tIt must be one of %q. If empty, noone is executed.\n\t\t\t\tIf set to the special value all, all default impls are executed.", dispel.DefaultImplNames()))
+	flag.StringVar(&templateNameList, "template", "all", fmt.Sprintf("\t\tExecute this template only.\n\t\t\t\tIt must be one of %q. If empty, noone is executed.\n\t\t\t\tIf set to the special value all (the default), all templates are executed.\n\t\t\t\tComma-separated lists are accepted.", dispel.TemplateNames()))
+	flag.StringVar(&defaultImplNameList, "default-impl", "", fmt.Sprintf("\t\tExecute this default impl only.\n\t\t\t\tIt must be one of %q. If empty (the default), noone is executed.\n\t\t\t\tIf set to the special value all, all default impls are executed.\n\t\t\t\tComma-separated lists are accepted.", dispel.DefaultImplNames()))
 	flag.StringVar(&prefix, "prefix", "dispel_", "\t\tThe prefix to use for each generated template file.\n\t\t\t\tThis doesn't apply to default implementations, which have fixed names.")
 	flag.StringVar(&handlerReceiverType, "handler-receiver-type", "", "\tThe type which will receive the handler funcs.")
 	flag.StringVar(&pkgpath, "pkgpath", "", "\t\t\tGenerate and analyze code in this package. It is mandatory to set a value if not invoked with go:generate.\n\t\t\t\tIf set when the program is invoked by go:generate, it overrides the package path resolved from $GOFILE.")
@@ -95,16 +95,22 @@ func main() {
 		log.Fatal("generated files need a non-empty prefix")
 	}
 
-	genPathFn := func(name string) string {
-		return filepath.Join(pkgAbsPath, fmt.Sprintf("%s%s.go", prefix, strings.ToLower(name)))
-	}
-
 	// Setting the json schema path is mandatory
 	if flag.NArg() < 1 {
 		flag.Usage()
 		log.Fatal("no jsonschema file provided")
 	}
 	schemaFilepath := flag.Arg(0)
+
+	// Split comma-separated lists of templates/default impls
+	templateNames := strings.Split(templateNameList, ",")
+	for i := range templateNames {
+		templateNames[i] = strings.TrimSpace(templateNames[i])
+	}
+	defaultImplNames := strings.Split(defaultImplNameList, ",")
+	for i := range defaultImplNames {
+		defaultImplNames[i] = strings.TrimSpace(defaultImplNames[i])
+	}
 
 	// Parse JSON Schema
 	schemaParser, err := parseSchema(schemaFilepath)
@@ -119,6 +125,10 @@ func main() {
 	}
 
 	// Create the list of generated file names
+	genPathFn := func(name string) string {
+		return filepath.Join(pkgAbsPath, fmt.Sprintf("%s%s.go", prefix, strings.ToLower(name)))
+	}
+
 	var genFiles []string
 	for _, tmplName := range t.Names() {
 		genFiles = append(genFiles, genPathFn(tmplName))
@@ -156,11 +166,11 @@ func main() {
 	}
 
 	// Exec templates
+	if len(templateNames) == 1 && templateNames[0] == "all" {
+		templateNames = t.Names()
+	}
 	var buf bytes.Buffer
-	for _, name := range t.Names() {
-		if templateName != "all" && templateName != name {
-			continue
-		}
+	for _, name := range templateNames {
 		if err := t.ExecuteTemplate(&buf, name, ctx); err != nil {
 			log.Fatal(err)
 		}
@@ -182,10 +192,10 @@ func main() {
 		log.Fatal(err)
 	}
 	buf.Reset()
-	for _, name := range defaultImpl.Names() {
-		if defaultImplName != "all" && defaultImplName != name {
-			continue
-		}
+	if len(defaultImplNames) == 1 && defaultImplNames[0] == "all" {
+		defaultImplNames = defaultImpl.Names()
+	}
+	for _, name := range defaultImplNames {
 		if err := defaultImpl.ExecuteTemplate(&buf, name, ctx.PkgName); err != nil {
 			log.Fatal(err)
 		}

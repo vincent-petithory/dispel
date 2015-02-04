@@ -272,9 +272,10 @@ func installWithDispelCmd(tb testing.TB, pkgdir string) {
 
 	dispelCmd := exec.Command(
 		"dispel",
-		"--handler-receiver-type=*App",
-		"--pkgname=main",
-		fmt.Sprintf("--pkgpath=%s", pkgdir),
+		"--handler-receiver-type", "*App",
+		"--pkgname", "main",
+		"--default-impl", "all",
+		"--pkgpath", pkgdir,
 		filepath.Join(pkgdir, "schema.json"),
 	)
 	out, err = dispelCmd.CombinedOutput()
