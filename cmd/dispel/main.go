@@ -22,6 +22,7 @@ var (
 	handlerReceiverType string
 	pkgpath             string
 	pkgname             string
+	altFormatPath       string
 )
 
 func init() {
@@ -31,6 +32,7 @@ func init() {
 	flag.StringVar(&handlerReceiverType, "handler-receiver-type", "", "\tThe type which will receive the handler funcs.")
 	flag.StringVar(&pkgpath, "pkgpath", "", "\t\t\tGenerate and analyze code in this package. It is mandatory to set a value if not invoked with go:generate.\n\t\t\t\tIf set when the program is invoked by go:generate, it overrides the package path resolved from $GOFILE.")
 	flag.StringVar(&pkgname, "pkgname", "", "\t\t\tThe package name to use at the pkgpath location. It is mandatory to set a value if not invoked with go:generate.\n\t\t\t\tIf set when the program is invoked by go:generate, it overrides the value of $GOPACKAGE")
+	flag.StringVar(&altFormatPath, "f", "", "\t\t\tPath to the file for an alternate format for the template to use, using the Go template syntax. The context passed to the template is TemplateContext.\n\t\t\t\tIf the value is -, then the template is read from STDIN.\n\t\t\t\tIf set, then --template and --default-impl flags are ignored: only this template is executed. The result is printed to STDOUT.")
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "Usage: dispel [OPTION]... SCHEMA")
 		fmt.Fprintln(os.Stderr)
@@ -163,6 +165,27 @@ func main() {
 		Routes:              routes,
 		HandlerReceiverType: handlerReceiverType,
 		ExistingHandlers:    existingHandlers,
+	}
+
+	if altFormatPath != "" {
+		var altFormat string
+		if altFormatPath == "-" {
+			b, err := ioutil.ReadAll(os.Stdin)
+			if err != nil {
+				log.Fatal(err)
+			}
+			altFormat = string(b)
+		} else {
+			b, err := ioutil.ReadFile(altFormatPath)
+			if err != nil {
+				log.Fatal(err)
+			}
+			altFormat = string(b)
+		}
+		if err := t.ExecuteCustomTemplate(os.Stdout, altFormat, ctx); err != nil {
+			log.Fatal(err)
+		}
+		return
 	}
 
 	// Exec templates
