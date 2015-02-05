@@ -56,6 +56,16 @@ func (t *TemplateBundle) ExecuteTemplate(wr io.Writer, name string, ctx *Templat
 	return t.t.ExecuteTemplate(wr, name, ctx)
 }
 
+// ExecuteCustomTemplate parses then executes the template text, using the ctx TemplateContext.
+func (t *TemplateBundle) ExecuteCustomTemplate(wr io.Writer, text string, ctx *TemplateContext) error {
+	ctx.sp = t.sp
+	tt, err := t.t.New("custom").Parse(text)
+	if err != nil {
+		return err
+	}
+	return tt.Execute(wr, ctx)
+}
+
 // Names returns the list of templates available in the Template bundle.
 func (t *TemplateBundle) Names() []string {
 	var a []string

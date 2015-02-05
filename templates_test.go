@@ -350,3 +350,116 @@ type Spell struct {
 	}
 	equals(t, string(expectedOut), string(out))
 }
+
+func TestAlternateTemplate(t *testing.T) {
+	schema := getSchema(t, "testdata/rpg.json")
+	sp := &SchemaParser{RootSchema: schema}
+	routes, err := sp.ParseRoutes()
+	ok(t, err)
+
+	ctx := &TemplateContext{
+		Prgm:                "dispel",
+		PkgName:             "handler",
+		Routes:              routes,
+		HandlerReceiverType: "*App",
+		ExistingHandlers:    []string{},
+	}
+
+	// sample custom template for a basic markdown documentation of the API
+	templateText := `{{ range .Routes.ByResource }}## Endpoint {{ .Name }}
+{{ $route := . }}{{ range .Methods }}
+{{ . }} {{ $route.Path }}
+{{ $io := index $route.MethodRouteIOMap . }}
+Request: {{ if $io.InType }}
+
+{{ printTypeName $io.InType }}
+{{ else }}empty
+{{ end }}
+Response: {{ if $io.OutType }}
+
+{{ printTypeName $io.OutType }}{{ else }}empty{{ end }}
+{{ end }}
+{{ end }}`
+
+	expectedOut := `## Endpoint characters
+
+GET /characters
+
+Request: empty
+
+Response: 
+
+ListCharacterOut
+
+POST /characters
+
+Request: 
+
+CreateCharacterIn
+
+Response: 
+
+Character
+
+## Endpoint characters.one
+
+GET /characters/{character-name}
+
+Request: empty
+
+Response: 
+
+Character
+
+## Endpoint characters.one.spells.one
+
+PUT /characters/{character-name}/spells/{spell-name}
+
+Request: empty
+
+Response: empty
+
+DELETE /characters/{character-name}/spells/{spell-name}
+
+Request: empty
+
+Response: empty
+
+## Endpoint spells
+
+GET /spells
+
+Request: empty
+
+Response: 
+
+ListSpellOut
+
+POST /spells
+
+Request: 
+
+Spell
+
+Response: 
+
+Spell
+
+## Endpoint spells.one
+
+GET /spells/{spell-name}
+
+Request: empty
+
+Response: 
+
+Spell
+
+`
+	tmpl, err := NewTemplateBundle(sp)
+	ok(t, err)
+
+	var buf bytes.Buffer
+	ok(t, tmpl.ExecuteCustomTemplate(&buf, templateText, ctx))
+	equals(t, expectedOut, buf.String())
+}
