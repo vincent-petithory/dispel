@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go/format"
 	"io"
+	"sort"
 	"strings"
 	"text/template"
 )
@@ -110,5 +111,6 @@ func DefaultImplNames() []string {
 	for name := range defaultImplsMap {
 		a = append(a, name)
 	}
+	sort.Strings(a)
 	return a
 }

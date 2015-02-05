@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"text/template"
 	"unicode"
@@ -37,6 +38,7 @@ func TemplateNames() []string {
 	for name := range templatesMap {
 		a = append(a, name)
 	}
+	sort.Strings(a)
 	return a
 }
 
