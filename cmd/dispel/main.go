@@ -24,6 +24,7 @@ var (
 	pkgpath             string
 	pkgname             string
 	altFormatPath       string
+	verbose             bool
 )
 
 func init() {
@@ -34,8 +35,9 @@ func init() {
 	flag.StringVar(&pkgpath, "pp", "", "")
 	flag.StringVar(&pkgname, "pn", "", "")
 	flag.StringVar(&altFormatPath, "f", "", "")
+	flag.BoolVar(&verbose, "v", false, "")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: dispel [-t names] [-d names] [-p prefix] [-hrt typename] [-pp packagepath] [-pn packagename] [-f path] SCHEMA")
+		fmt.Fprintln(os.Stderr, "usage: dispel [-t names] [-d names] [-p prefix] [-hrt typename] [-pp packagepath] [-pn packagename] [-f path] [-v] SCHEMA")
 		fmt.Fprintln(os.Stderr)
 		usage(os.Stderr)
 	}
@@ -49,6 +51,8 @@ The dispel command requires a unique argument, SCHEMA, which is the path to the 
 dispel is best used in conjunction with go:generate, by making use of $GOPACKAGE and $GOFILE envvars.
 
 FLAGS
+
+The -v flag makes dispel more verbose about what the entities it discovers while parsing the json schema.
 
 The -t flag specifies which templates to execute, with a comma-separated list of template names.
 The names must be in the following list:
@@ -123,7 +127,7 @@ For more information, see the documentation of the github.com/vincent-petithory/
 	)
 }
 
-func parseSchema(path string) (*dispel.SchemaParser, error) {
+func NewSchemaParser(path string) (*dispel.SchemaParser, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -198,9 +202,12 @@ func main() {
 	}
 
 	// Parse JSON Schema
-	schemaParser, err := parseSchema(schemaFilepath)
+	schemaParser, err := NewSchemaParser(schemaFilepath)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if verbose {
+		schemaParser.Log = log.New(os.Stdout, "dispel> ", 0)
 	}
 
 	// Create dispel template using the parser
