@@ -91,7 +91,7 @@ type Route struct {
 type RouteIO struct {
 	// InType is the JSON type coming in.
 	InType JSONType
-	// InType is the JSON type coming out.
+	// OutType is the JSON type coming out.
 	OutType JSONType
 }
 
@@ -518,7 +518,7 @@ func capitalize(s string) string {
 }
 
 func symbolName(s string) string {
-	return capitalize(toUpperAfterAny(s, ".- "))
+	return capitalize(toUpperAfterAny(s, ".-_ "))
 }
 
 func ref2name(ref string) string {
@@ -711,7 +711,7 @@ func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
 		if n.TypeName() == "" {
 			log.Panicf("no unnamed type should exist")
 		}
-		return n.TypeName()
+		return symbolName(n.TypeName())
 	}
 	switch j := jt.(type) {
 	case JSONString:
@@ -726,7 +726,7 @@ func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
 		var buf bytes.Buffer
 		_, _ = buf.WriteString("struct {\n")
 		for _, f := range j.Fields {
-			fmt.Fprintf(&buf, "%s %s `json:\"%s\"`\n", capitalize(f.Name), sp.JSONToGoType(f.Type, false), f.Name)
+			fmt.Fprintf(&buf, "%s %s `json:\"%s\"`\n", symbolName(f.Name), sp.JSONToGoType(f.Type, false), f.Name)
 		}
 		_, _ = buf.WriteString("}")
 		return buf.String()
