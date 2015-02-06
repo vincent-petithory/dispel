@@ -803,6 +803,7 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 				Name:   n,
 				Method: strings.ToUpper(link.Method),
 			}
+			sp.logf("discovered route %s -> %s %q ", route.Name, route.Method, route.Path)
 			rp, err := sp.RouteParamsFromLink(&link, resProperty)
 			if err != nil {
 				return nil, err
@@ -817,6 +818,7 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 					return nil, err
 				}
 				route.InType = inType
+				sp.logf(" --> found input type %s", inType.Type())
 			}
 			if link.TargetSchema != nil {
 				outType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sOut", capitalize(link.Rel), symbolName(propertyName)), link.TargetSchema, link.TargetSchema.Ref)
@@ -824,6 +826,7 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 					return nil, err
 				}
 				route.OutType = outType
+				sp.logf(" --> found output type %s", outType.Type())
 			}
 			schemaRoutes = append(schemaRoutes, *route)
 		}
@@ -911,6 +914,7 @@ func (sp *SchemaParser) JSONTypeFromSchema(defaultName string, schema *Schema, r
 			sp.RefJSONTypeMap = make(map[string]JSONType)
 		}
 		if _, ok := sp.RefJSONTypeMap[jt.Ref()]; !ok {
+			sp.logf("registering ref %q for type %s", jt.Ref(), jt.Type())
 			sp.RefJSONTypeMap[jt.Ref()] = jt
 		}
 	}()
@@ -1017,6 +1021,7 @@ func (sp *SchemaParser) RouteParamsFromLink(link *Link, schema *Schema) ([]Route
 		if err != nil {
 			return nil, err
 		}
+		sp.logf(" --> link %s: discovered route param %s", link.HRef, name)
 		routeParams = append(routeParams, RouteParam{
 			Name:    name,
 			Varname: vname,
