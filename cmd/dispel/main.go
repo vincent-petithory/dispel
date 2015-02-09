@@ -127,6 +127,7 @@ For more information, see the documentation of the github.com/vincent-petithory/
 	)
 }
 
+// NewSchemaParser creates a new SchemaParser for the json schema at path.
 func NewSchemaParser(path string) (*dispel.SchemaParser, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -221,20 +222,23 @@ func main() {
 		return filepath.Join(pkgAbsPath, fmt.Sprintf("%s%s.go", prefix, strings.ToLower(name)))
 	}
 
-	var genFiles []string
+	var genFilenames []string
 	for _, tmplName := range t.Names() {
-		genFiles = append(genFiles, genPathFn(tmplName))
+		genFilenames = append(genFilenames, filepath.Base(genPathFn(tmplName)))
 	}
 
 	// Find methods whose receiver's type is the one defined as holding handler funcs implementations
 	// We exclude the ones we auto-generate.
-	handlerFuncDecls, err := dispel.FindTypesFuncs(pkgAbsPath, pkgname, []string{strings.Replace(handlerReceiverType, "*", "", -1)}, genFiles)
+	handlerFuncDecls, err := dispel.FindTypesFuncs(pkgAbsPath, pkgname, []string{strings.Replace(handlerReceiverType, "*", "", -1)}, genFilenames)
 	if err != nil {
 		log.Fatal(err)
 	}
 	var existingHandlers []string
 	for name := range handlerFuncDecls {
 		existingHandlers = append(existingHandlers, name)
+	}
+	if verbose {
+		log.Printf("existing handlers: %s", strings.Join(existingHandlers, "\n --> "))
 	}
 
 	// Parse the routes in the schema
