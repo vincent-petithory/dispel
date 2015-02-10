@@ -168,7 +168,7 @@ func (routes Routes) JSONNamedTypes() []JSONTypeNamer {
 			}
 			routes.walkType(typ, func(jtn JSONTypeNamer) {
 				tn := jtn.TypeName()
-				if _, ok := visited[tn]; !ok {
+				if ok := visited[tn]; !ok {
 					visited[tn] = true
 					a = append(a, jtn)
 				}
@@ -775,6 +775,8 @@ func (sp *SchemaParser) logf(format string, v ...interface{}) {
 }
 
 // ParseRoutes parses the Schema and returns a list of Route instances.
+//
+// Various errors may be returned, among them InvalidSchemaError and *TypeRedefinitionError.
 func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 	if sp.RootSchema == nil {
 		return nil, InvalidSchemaError{Schema{}, "no schema provided"}
@@ -832,6 +834,17 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 		}
 	}
 	sort.Sort(schemaRoutes)
+	typeRedefs, ok := sp.checkNamedTypeRedefinitions(schemaRoutes)
+	if !ok {
+		for name, types := range typeRedefs {
+			// Pick the first we find, for now; we don't want to flood errors
+			return schemaRoutes, &TypeRedefinitionError{
+				Name:   name,
+				First:  types[0],
+				Redefs: types[1:],
+			}
+		}
+	}
 	return schemaRoutes, nil
 }
 
@@ -913,9 +926,11 @@ func (sp *SchemaParser) JSONTypeFromSchema(defaultName string, schema *Schema, r
 		if sp.RefJSONTypeMap == nil {
 			sp.RefJSONTypeMap = make(map[string]JSONType)
 		}
-		if _, ok := sp.RefJSONTypeMap[jt.Ref()]; !ok {
+		if pjt, ok := sp.RefJSONTypeMap[jt.Ref()]; !ok {
 			sp.logf("registering ref %q for type %s", jt.Ref(), jt.Type())
 			sp.RefJSONTypeMap[jt.Ref()] = jt
+		} else {
+			sp.logf("[warn] type %s redefined to %s", sp.JSONToGoType(pjt, false), sp.JSONToGoType(jt, false))
 		}
 	}()
 	resSchema, err := sp.ResolveSchema(schema)
@@ -1029,4 +1044,52 @@ func (sp *SchemaParser) RouteParamsFromLink(link *Link, schema *Schema) ([]Route
 		})
 	}
 	return routeParams, nil
+}
+
+// checkNamedTypeRedefinitions analyzes the routes just parsed by the SchemaParser and returns the
+// redefinitions of named types it finds.
+func (sp *SchemaParser) checkNamedTypeRedefinitions(routes Routes) (map[string][]JSONTypeNamer, bool) {
+	noRedefinitions := true
+	redefinitions := make(map[string][]JSONTypeNamer)
+	definitions := make(map[string]JSONTypeNamer)
+
+	for _, route := range routes {
+		for _, typ := range []JSONType{route.InType, route.OutType} {
+			if typ == nil {
+				continue
+			}
+			routes.walkType(typ, func(jtn JSONTypeNamer) {
+				tn := jtn.TypeName()
+				if fjtn, ok := definitions[tn]; !ok {
+					definitions[tn] = jtn
+					redefinitions[tn] = []JSONTypeNamer{jtn}
+				} else {
+					// it's okay to compare with the string representation of the type.
+					if sp.JSONToGoType(jtn, true) != sp.JSONToGoType(fjtn, true) {
+						redefinitions[tn] = append(redefinitions[tn], jtn)
+						noRedefinitions = false
+					}
+				}
+			})
+		}
+	}
+	if !noRedefinitions {
+		for name, types := range redefinitions {
+			if len(types) == 1 {
+				delete(redefinitions, name)
+			}
+		}
+	}
+	return redefinitions, noRedefinitions
+}
+
+// TypeRedefinitionError represents a named type which has been redefined one or more times with a different definition.
+type TypeRedefinitionError struct {
+	Name   string
+	First  JSONTypeNamer
+	Redefs []JSONTypeNamer
+}
+
+func (e *TypeRedefinitionError) Error() string {
+	return fmt.Sprintf("type %s defined multiple times", e.Name)
 }

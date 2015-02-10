@@ -1,9 +1,12 @@
 package dispel
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"go/format"
+	"os"
+	"regexp"
 	"testing"
 )
 
@@ -462,4 +465,44 @@ Spell
 	var buf bytes.Buffer
 	ok(t, tmpl.ExecuteCustomTemplate(&buf, templateText, ctx))
 	equals(t, expectedOut, buf.String())
+}
+
+func TestSchemaHasRedefinedTypes(t *testing.T) {
+	f, err := os.Open("testdata/documents-and-products.json")
+	ok(t, err)
+	defer f.Close()
+	// Modify schema to give it duplicated "rel" attrs
+	var buf bytes.Buffer
+	scanner := bufio.NewScanner(f)
+	scanner.Split(bufio.ScanLines)
+	for scanner.Scan() {
+		line := scanner.Text()
+		re := regexp.MustCompile(`\s*"rel":\s*"(\w+)-(un)?(link)",`)
+		if re.MatchString(line) {
+			line = fmt.Sprintf("\"rel\": \"%s\",", re.ReplaceAllString(line, "${2}${3}"))
+		}
+		fmt.Fprintln(&buf, line)
+	}
+
+	schema := getSchemaString(t, buf.String())
+	sp := &SchemaParser{RootSchema: schema}
+	_, err = sp.ParseRoutes()
+	assert(t, err != nil, "expected an error, got nil")
+
+	switch e := err.(type) {
+	case *TypeRedefinitionError:
+		candidateRenames := []string{"UnlinkCategoryOut", "LinkCategoryOut"}
+		var found bool
+		for _, candidate := range candidateRenames {
+			if e.Name == candidate {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("Expected redefined type to be one of %q, got %s", candidateRenames, e.Name)
+		}
+	default:
+		t.Fatalf("Got unexpected error %v", err)
+	}
 }

@@ -1,0 +1,331 @@
+{
+    "$schema": "http://json-schema.org/draft-04/hyper-schema",
+    "title": "D&P API",
+    "type": "object",
+    "definitions": {
+        "id": {
+            "title": "D&P API - ID",
+            "type": "string"
+        },
+        "category": {
+            "title": "D&P API - Category",
+            "type": "object",
+            "definitions": {
+                "id": {
+                    "$ref": "#/definitions/id"
+                },
+                "name": {
+                    "type": "string"
+                }
+            },
+            "links": [
+                {
+                    "title": "List existing categories.",
+                    "href": "/categories",
+                    "method": "GET",
+                    "rel": "instances",
+		    "targetSchema": {
+			"type": "array",
+			"items": {"$ref": "#/definitions/category"}
+		    }
+                },
+                {
+                    "title": "Create a new category.",
+                    "href": "/categories",
+                    "method": "POST",
+                    "rel": "create",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "$ref": "#/definitions/category/definitions/name"
+                            }
+                        }
+                    },
+		    "targetSchema": {"$ref": "#/definitions/category"}
+                },
+                {
+                    "title": "Info for an category.",
+                    "href": "/categories/{(#/definitions/category/definitions/id)}",
+                    "method": "GET",
+                    "rel": "self",
+		    "targetSchema": {"$ref": "#/definitions/category"}
+                },
+                {
+                    "title": "Update an existing category.",
+                    "href": "/categories/{(#/definitions/category/definitions/id)}",
+                    "method": "PUT",
+                    "rel": "update",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "$ref": "#/definitions/category/definitions/name"
+                            }
+                        }
+                    },
+		    "targetSchema": {"$ref": "#/definitions/category"}
+                },
+                {
+                    "title": "Delete an existing category.",
+                    "href": "/categories/{(#/definitions/category/definitions/id)}",
+                    "method": "DELETE",
+                    "rel": "destroy",
+		    "targetSchema": {"$ref": "#/definitions/category"}
+                },
+                {
+                    "title": "Add a category to an existing document",
+                    "href": "/documents/{(#/definitions/document/definitions/id)}/categories/{(#/definitions/category/definitions/id)}",
+                    "method": "PUT",
+                    "rel": "document-link",
+		    "targetSchema": {
+			"properties": {
+			    "category": {"$ref": "#/definitions/category"},
+			    "document": {"$ref": "#/definitions/document"}
+			}
+		    }
+                },
+                {
+                    "title": "Remove a category from an existing document",
+                    "href": "/documents/{(#/definitions/document/definitions/id)}/categories/{(#/definitions/category/definitions/id)}",
+                    "method": "DELETE",
+                    "rel": "document-unlink",
+		    "targetSchema": {
+			"properties": {
+			    "category": {"$ref": "#/definitions/category"},
+			    "document": {"$ref": "#/definitions/document"}
+			}
+		    }
+                },
+                {
+                    "title": "Add a category to an existing product",
+                    "href": "/products/{(#/definitions/product/definitions/id)}/categories/{(#/definitions/category/definitions/id)}",
+                    "method": "PUT",
+                    "rel": "product-link",
+		    "targetSchema": {
+			"properties": {
+			    "category": {"$ref": "#/definitions/category"},
+			    "product": {"$ref": "#/definitions/product"}
+			}
+		    }
+                },
+                {
+                    "title": "Remove a category from an existing product",
+                    "href": "/products/{(#/definitions/product/definitions/id)}/categories/{(#/definitions/category/definitions/id)}",
+                    "method": "DELETE",
+                    "rel": "product-unlink",
+		    "targetSchema": {
+			"properties": {
+			    "category": {"$ref": "#/definitions/category"},
+			    "product": {"$ref": "#/definitions/product"}
+			}
+		    }
+                }
+            ],
+            "properties": {
+                "id": {
+                    "$ref": "#/definitions/category/definitions/id"
+                },
+                "name": {
+                    "$ref": "#/definitions/category/definitions/name"
+                }
+            }
+        },
+        "document": {
+            "title": "D&P API - Document",
+            "type": "object",
+            "definitions": {
+                "id": {
+                    "$ref": "#/definitions/id"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pagenumbering": {
+                    "type": "integer"
+                },
+                "width": {
+                    "type": "integer"
+                },
+                "height": {
+                    "type": "integer"
+                }
+            },
+            "links": [
+                {
+                    "title": "Create a new document for a campaign",
+                    "href": "/documents",
+                    "method": "POST",
+                    "rel": "create",
+                    "schema": {
+                        "properties": {
+                            "name": {
+                                "$ref": "#/definitions/document/definitions/name"
+                            },
+                            "width": {
+                                "$ref": "#/definitions/document/definitions/width"
+                            },
+                            "height": {
+                                "$ref": "#/definitions/document/definitions/height"
+                            }
+			}
+                    }
+                },
+                {
+                    "title": "List existing documents",
+                    "href": "/documents",
+                    "method": "GET",
+                    "rel": "instances"
+                },
+                {
+                    "title": "Info for an existing document",
+                    "href": "/documents/{(#/definitions/document/definitions/id)}",
+                    "method": "GET",
+                    "rel": "self"
+                },
+                {
+                    "title": "Delete an existing document",
+                    "href": "/documents/{(#/definitions/document/definitions/id)}",
+                    "method": "DELETE",
+                    "rel": "destroy"
+                },
+                {
+                    "title": "Update an existing document",
+                    "href": "/documents/{(#/definitions/document/definitions/id)}",
+                    "method": "PATCH",
+                    "rel": "update",
+                    "schema": {
+                        "properties": {
+                            "name": {
+                                "$ref": "#/definitions/document/definitions/name"
+                            }
+                        }
+                    }
+                }
+            ],
+            "properties": {
+                "id": {
+                    "$ref": "#/definitions/document/definitions/id"
+                },
+                "name": {
+                    "$ref": "#/definitions/document/definitions/name"
+                },
+                "page_numbering": {
+                    "$ref": "#/definitions/document/definitions/pagenumbering"
+                },
+                "width": {
+                    "$ref": "#/definitions/document/definitions/width"
+                },
+                "height": {
+                    "$ref": "#/definitions/document/definitions/height"
+                }
+            }
+        },
+        "product": {
+            "title": "D&P API - Product",
+            "type": "object",
+            "definitions": {
+                "id": {
+                    "$ref": "#/definitions/id"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                }
+            },
+            "links": [
+                {
+                    "title": "List products in a document.",
+                    "href": "/documents/{(#/definitions/document/definitions/id)}/products",
+                    "method": "GET",
+                    "rel": "instances"
+                },
+                {
+                    "title": "List existing products, can be filtered",
+                    "encType": "application/x-www-form-urlencoded",
+                    "href": "/products",
+                    "method": "GET",
+                    "rel": "instances",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "q": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                {
+                    "title": "Info for an existing product",
+                    "href": "/products/{(#/definitions/product/definitions/id)}",
+                    "method": "GET",
+                    "rel": "self"
+                },
+                {
+                    "title": "Update an existing product.",
+                    "href": "/products/{(#/definitions/product/definitions/id)}",
+                    "method": "PATCH",
+                    "rel": "update",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "$ref": "#/definitions/product/definitions/name"
+                            },
+                            "price": {
+                                "$ref": "#/definitions/product/definitions/price"
+                            }
+                        }
+                    }
+                },
+                {
+                    "title": "Create a new product.",
+                    "href": "/products",
+                    "method": "POST",
+                    "rel": "create",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "$ref": "#/definitions/product/definitions/name"
+                            }
+                        }
+                    }
+                },
+                {
+                    "title": "Delete an existing product",
+                    "href": "/products/{(#/definitions/product/definitions/id)}",
+                    "method": "DELETE",
+                    "rel": "destroy"
+                }
+            ],
+            "properties": {
+                "id": {
+                    "$ref": "#/definitions/product/definitions/id"
+                },
+                "name": {
+                    "$ref": "#/definitions/product/definitions/name"
+                },
+                "price": {
+                    "$ref": "#/definitions/product/definitions/price"
+                }
+            }
+        }
+    },
+    "properties": {
+	"id": {
+            "$ref": "#/definitions/id"
+	},
+        "category": {
+            "$ref": "#/definitions/category"
+        },
+        "document": {
+            "$ref": "#/definitions/document"
+        },
+        "product": {
+            "$ref": "#/definitions/product"
+        }
+    }
+}
