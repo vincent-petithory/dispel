@@ -815,7 +815,7 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 			}
 			route.RouteParams = rp
 			if link.Schema != nil {
-				inType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sIn", capitalize(link.Rel), symbolName(propertyName)), link.Schema, link.Schema.Ref)
+				inType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sIn", symbolName(link.Rel), symbolName(propertyName)), link.Schema, link.Schema.Ref)
 				if err != nil {
 					return nil, err
 				}
@@ -823,7 +823,7 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 				sp.logf(" --> found input type %s", inType.Type())
 			}
 			if link.TargetSchema != nil {
-				outType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sOut", capitalize(link.Rel), symbolName(propertyName)), link.TargetSchema, link.TargetSchema.Ref)
+				outType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sOut", symbolName(link.Rel), symbolName(propertyName)), link.TargetSchema, link.TargetSchema.Ref)
 				if err != nil {
 					return nil, err
 				}
