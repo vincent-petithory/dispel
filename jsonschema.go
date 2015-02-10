@@ -175,16 +175,16 @@ func (routes Routes) JSONNamedTypes() []JSONTypeNamer {
 			})
 		}
 	}
-	sort.Sort(ByTypeName(a))
+	sort.Sort(byTypeName(a))
 	return a
 }
 
-// ByTypeName implements sorting by TypeName for a slice of JSONTypeNamer objects.
-type ByTypeName []JSONTypeNamer
+// byTypeName implements sorting by TypeName for a slice of JSONTypeNamer objects.
+type byTypeName []JSONTypeNamer
 
-func (btn ByTypeName) Len() int           { return len(btn) }
-func (btn ByTypeName) Swap(i, j int)      { btn[i], btn[j] = btn[j], btn[i] }
-func (btn ByTypeName) Less(i, j int) bool { return btn[i].TypeName() < btn[j].TypeName() }
+func (btn byTypeName) Len() int           { return len(btn) }
+func (btn byTypeName) Swap(i, j int)      { btn[i], btn[j] = btn[j], btn[i] }
+func (btn byTypeName) Less(i, j int) bool { return btn[i].TypeName() < btn[j].TypeName() }
 
 // JSONTypeNamer combines the TypeNamer and JSONType interfaces.
 type JSONTypeNamer interface {
