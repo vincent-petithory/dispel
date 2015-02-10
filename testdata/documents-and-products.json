@@ -240,14 +240,14 @@
                     "title": "List products in a document.",
                     "href": "/documents/{(#/definitions/document/definitions/id)}/products",
                     "method": "GET",
-                    "rel": "instances"
+                    "rel": "document-list"
                 },
                 {
                     "title": "List existing products, can be filtered",
                     "encType": "application/x-www-form-urlencoded",
                     "href": "/products",
                     "method": "GET",
-                    "rel": "instances",
+                    "rel": "list",
                     "schema": {
                         "type": "object",
                         "properties": {

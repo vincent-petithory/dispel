@@ -791,7 +791,13 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 		if err != nil {
 			return nil, err
 		}
+		linksRelAttr := make(map[string]bool)
 		for _, link := range resProperty.Links {
+			if exists := linksRelAttr[link.Rel]; exists {
+				return nil, InvalidSchemaError{*property, fmt.Sprintf("duplicate link \"rel\" %s", link.Rel)}
+			}
+			linksRelAttr[link.Rel] = true
+
 			p, err := href2path(link.HRef)
 			if err != nil {
 				return nil, err

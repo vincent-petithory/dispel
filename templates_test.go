@@ -7,6 +7,7 @@ import (
 	"go/format"
 	"os"
 	"regexp"
+	"strings"
 	"testing"
 )
 
@@ -467,7 +468,7 @@ Spell
 	equals(t, expectedOut, buf.String())
 }
 
-func TestSchemaHasRedefinedTypes(t *testing.T) {
+func TestSchemaHasDuplicateRel(t *testing.T) {
 	f, err := os.Open("testdata/documents-and-products.json")
 	ok(t, err)
 	defer f.Close()
@@ -480,6 +481,47 @@ func TestSchemaHasRedefinedTypes(t *testing.T) {
 		re := regexp.MustCompile(`\s*"rel":\s*"(\w+)-(un)?(link)",`)
 		if re.MatchString(line) {
 			line = fmt.Sprintf("\"rel\": \"%s\",", re.ReplaceAllString(line, "${2}${3}"))
+		}
+		fmt.Fprintln(&buf, line)
+	}
+
+	schema := getSchemaString(t, buf.String())
+	sp := &SchemaParser{RootSchema: schema}
+	_, err = sp.ParseRoutes()
+	assert(t, err != nil, "expected an error, got nil")
+
+	switch e := err.(type) {
+	case InvalidSchemaError:
+		if !strings.HasPrefix(e.Msg, "duplicate link \"rel\"") {
+			t.Fatalf("Expected duplicate link rel error msg, got %s", e.Msg)
+		}
+	default:
+		t.Fatalf("Got unexpected error %v", err)
+	}
+}
+
+func TestSchemaHasRedefinedTypes(t *testing.T) {
+	f, err := os.Open("testdata/documents-and-products.json")
+	ok(t, err)
+	defer f.Close()
+	// Modify schema to give it duplicated "rel" attrs
+	var buf bytes.Buffer
+	scanner := bufio.NewScanner(f)
+	scanner.Split(bufio.ScanLines)
+	var count int
+	for scanner.Scan() {
+		line := scanner.Text()
+		re := regexp.MustCompile(`\s*"rel":\s*"(\w+)-link",`)
+		// We should find it twice: document-link, product-link
+		if re.MatchString(line) {
+			rel := "link"
+			if count > 0 {
+				// fake diff rel by capitalizing
+				// This will still to colliding named types
+				rel = "Link"
+			}
+			line = fmt.Sprintf("\"rel\": \"%s\",", rel)
+			count++
 		}
 		fmt.Fprintln(&buf, line)
 	}
