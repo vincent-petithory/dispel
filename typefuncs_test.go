@@ -99,3 +99,83 @@ func (fg funcGroup2) F23() {}
 	sort.Strings(funcNames)
 	equals(t, expectedFuncs, funcNames)
 }
+
+func TestFindTypes(t *testing.T) {
+	pkgName := "main"
+	files := map[string]string{
+		"t1.go": fmt.Sprintf(`package %s
+
+type Spell struct {
+    Name string
+    Power int
+}
+
+type FooBar struct {
+    Foo string
+    Bar bool
+}
+
+`, pkgName),
+		"t2.go": fmt.Sprintf(`package %s
+
+type unexportedT struct {
+    X, Y float64
+}
+
+type (
+    V1 struct {}
+    V2 int
+    V3 Spell
+)
+
+func F() bool {
+    return true
+}
+
+`, pkgName),
+		"exc.go": fmt.Sprintf(`package %s
+
+func (s *Spell) Cast() error {
+    panic("forgot wand")
+    return nil
+}
+
+type X int
+
+const (
+    X1 X = iota
+    X2
+    X3
+    X4
+)
+
+`, pkgName),
+	}
+
+	expectedTypes := []string{
+		"Spell",
+		"FooBar",
+		"unexportedT",
+		"V1", "V2", "V3",
+	}
+	sort.Strings(expectedTypes)
+
+	tmpDir, err := ioutil.TempDir("", "find-types-")
+	ok(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	ok(t, os.Mkdir(filepath.Join(tmpDir, pkgName), 0700))
+
+	for name, contents := range files {
+		ok(t, ioutil.WriteFile(filepath.Join(tmpDir, pkgName, name), []byte(contents), 0600))
+	}
+
+	typeSpecs, err := FindTypes(filepath.Join(tmpDir, pkgName), pkgName, []string{"exc.go"})
+	ok(t, err)
+	typeNames := make([]string, 0, len(typeSpecs))
+	for typeName := range typeSpecs {
+		typeNames = append(typeNames, typeName)
+	}
+	sort.Strings(typeNames)
+	equals(t, expectedTypes, typeNames)
+}

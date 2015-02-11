@@ -74,3 +74,36 @@ func FindTypesFuncs(path string, pkgName string, typeNames []string, excludeFile
 	}
 	return funcDecls, nil
 }
+
+// FindTypes parses the AST of files of a package, look for the types declared in those files, excluding those listed in excludeFiles.
+// It returns a map of type names -> *ast.TypeSpec.
+func FindTypes(path string, pkgName string, excludeFiles []string) (map[string]*ast.TypeSpec, error) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, path, func(fi os.FileInfo) bool {
+		for _, f := range excludeFiles {
+			if fi.Name() == f {
+				return false
+			}
+		}
+		return true
+	}, parser.DeclarationErrors)
+	if err != nil {
+		return nil, err
+	}
+	pkg, ok := pkgs[pkgName]
+	if !ok {
+		return nil, fmt.Errorf("%s: package not found in %q", pkgName, path)
+	}
+
+	typeSpecs := make(map[string]*ast.TypeSpec)
+	for _, astFile := range pkg.Files {
+		ast.Walk(walker(func(node ast.Node) bool {
+			switch v := node.(type) {
+			case *ast.TypeSpec:
+				typeSpecs[v.Name.String()] = v
+			}
+			return true
+		}), astFile)
+	}
+	return typeSpecs, nil
+}
