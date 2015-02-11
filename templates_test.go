@@ -86,7 +86,7 @@ func (r RouteSpellsOne) Location(rr RouteReverser) *url.URL {
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, "routes", ctx))
+	ok(t, tmpl.ExecuteTemplate(&buf, TemplateRoutes, ctx))
 	out, err := format.Source(buf.Bytes())
 	ok(t, err)
 	equals(t, string(expectedOut), string(out))
@@ -191,7 +191,7 @@ func registerHandlers(hr HandlerRegisterer, rpg RouteParamGetter, a *App, hd HTT
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, "handlers", ctx))
+	ok(t, tmpl.ExecuteTemplate(&buf, TemplateHandlers, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -240,7 +240,7 @@ func (a *App) getSpellsOne(w http.ResponseWriter, r *http.Request, spellName str
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, "handlerfuncs", ctx))
+	ok(t, tmpl.ExecuteTemplate(&buf, TemplateHandlerfuncs, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -281,7 +281,7 @@ type Spell struct {
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, "types", ctx))
+	ok(t, tmpl.ExecuteTemplate(&buf, TemplateTypes, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -341,7 +341,7 @@ type Spell struct {
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, "types", ctx))
+	ok(t, tmpl.ExecuteTemplate(&buf, TemplateTypes, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
