@@ -2,6 +2,8 @@
 
 package {{ .PkgName }}
 
-{{ range .Routes.JSONNamedTypes }}{{ printTypeDef . }}
+{{ $existingTypes := .ExistingTypes }}{{ range .Routes.JSONNamedTypes }}{{/*
+Do not generate the type definition if it's already present in the package
+*/}}{{ if not (hasItem $existingTypes .TypeName) }}{{ printTypeDef . }}{{ end }}
 
 {{ end }}

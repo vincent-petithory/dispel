@@ -101,11 +101,12 @@ TEMPLATE CONTEXT
 The following struct is passed to the templates:
 
     type TemplateContext struct {
-        Prgm                string   // name of the program generated the source
+        Prgm                string   // name of the program generating the source
         PkgName             string   // package name for which source code is generated
         Routes              Routes   // routes parsed by the SchemaParser
-        HandlerReceiverType string   // type which acts as the receiver the handler funcs.
+        HandlerReceiverType string   // type which acts as the receiver of the handler funcs.
         ExistingHandlers    []string // list of existing handler funcs in the target package, with HandlerReceiverType as the receiver
+        ExistingTypes       []string // list of existing types in the target package.
     }
 
 The template has those functions available:
@@ -241,6 +242,20 @@ func main() {
 		log.Printf("existing handlers: %s", strings.Join(existingHandlers, "\n --> "))
 	}
 
+	// Find types already defined in the package.
+	// We exclude the ones we auto-generate.
+	typeSpecs, err := dispel.FindTypes(pkgAbsPath, pkgname, genFilenames)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var existingTypes []string
+	for name := range typeSpecs {
+		existingTypes = append(existingTypes, name)
+	}
+	if verbose {
+		log.Printf("existing types: %s", strings.Join(existingTypes, "\n --> "))
+	}
+
 	// Parse the routes in the schema
 	routes, err := schemaParser.ParseRoutes()
 	if err != nil {
@@ -259,6 +274,7 @@ func main() {
 		Routes:              routes,
 		HandlerReceiverType: handlerReceiverType,
 		ExistingHandlers:    existingHandlers,
+		ExistingTypes:       existingTypes,
 	}
 
 	if altFormatPath != "" {

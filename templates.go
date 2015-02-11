@@ -79,11 +79,12 @@ func (t *TemplateBundle) Names() []string {
 
 // TemplateContext represents the context passed to a Template.
 type TemplateContext struct {
-	Prgm                string
-	PkgName             string
-	Routes              Routes
-	HandlerReceiverType string
-	ExistingHandlers    []string
+	Prgm                string   // name of the program generating the source
+	PkgName             string   // package name for which source code is generated
+	Routes              Routes   // routes parsed by the SchemaParser
+	HandlerReceiverType string   // type which acts as the receiver of the handler funcs.
+	ExistingHandlers    []string // list of existing handler funcs in the target package, with HandlerReceiverType as the receiver
+	ExistingTypes       []string // list of existing types in the target package.
 
 	sp *SchemaParser
 }
