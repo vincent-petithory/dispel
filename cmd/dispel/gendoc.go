@@ -54,11 +54,14 @@ func generateHelpVar() error {
 	defer f.Close()
 
 	fmt.Fprintln(f, "package main")
-	fmt.Fprint(f, "\nvar helptext = `")
-	if err := executeHelpTemplate(f); err != nil {
+	fmt.Fprint(f, "\nvar helptext = \"")
+
+	vw := NewVarWriter(f)
+	if err := executeHelpTemplate(vw); err != nil {
 		return err
 	}
-	fmt.Fprintln(f, "`")
+
+	fmt.Fprintln(f, "\"")
 	return nil
 }
 
@@ -97,4 +100,25 @@ func executeHelpTemplate(w io.Writer) error {
 		TemplateNames:    dispel.TemplateNames(),
 		DefaultImplNames: dispel.DefaultImplNames(),
 	})
+}
+
+func NewVarWriter(w io.Writer) *VarWriter {
+	return &VarWriter{w: w}
+}
+
+type VarWriter struct {
+	w io.Writer
+}
+
+func (vw *VarWriter) Write(p []byte) (n int, err error) {
+	_, err = vw.w.Write(
+		bytes.Replace(
+			bytes.Replace(p, []byte("\""), []byte("\\\""), -1),
+			[]byte("\n"), []byte("\\n"), -1,
+		),
+	)
+	if err != nil {
+		return 0, err
+	}
+	return len(p), nil
 }
