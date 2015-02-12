@@ -6,6 +6,7 @@ Though already usable, this is still a work in progress and APIs are unstable.
 This will be updated in time when things stabilize.
 
 Package documentation: [![GoDoc](https://godoc.org/github.com/vincent-petithory/dispel?status.png)](https://godoc.org/github.com/vincent-petithory/dispel)
+
 Command documentation: [![GoDoc](https://godoc.org/github.com/vincent-petithory/dispel/cmd/dispel?status.png)](https://godoc.org/github.com/vincent-petithory/dispel/cmd/dispel)
 
 ## JSON Schema supported/unsupported features
