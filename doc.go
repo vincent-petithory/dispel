@@ -4,6 +4,8 @@
 // Its primary use is through go:generate, but it's also possible to invoke the dispel command directly,
 // or use this package in your code.
 //
+// JSON Schema
+//
 // Usage of this package usually begins with parsing a JSON Schema and the routes it contains:
 //
 //     var schema dispel.Schema
@@ -16,6 +18,8 @@
 // Then you want to generate code using these routes. Dispel provides several builtin templates
 // which provide code generation for registering API routes and API handlers, generating input and output types
 // for the data structures of these routes, and default implementations of API handlers.
+//
+// Templates
 //
 // The TemplateBundle type is a bundle of all these templates; all templates for generating this code use the same template context:
 //
