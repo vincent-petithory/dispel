@@ -311,8 +311,6 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithGoGenerate(t *testing.T) {
 				"-t", "all",
 				"-hrt", "*App",
 				"-d", "all",
-				"-pn", "main",
-				"-pp", pkgdir,
 				"schema.json",
 			}, " "))
 
@@ -372,8 +370,6 @@ type Character struct {
 				"-t", "all",
 				"-hrt", "*App",
 				"-d", "all",
-				"-pn", "main",
-				"-pp", pkgdir,
 				"schema.json",
 			}, " "))
 
