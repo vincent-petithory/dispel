@@ -6,6 +6,8 @@ It is best used in conjunction with go generate, by making use of $GOPACKAGE and
 
 Flags
 
+The --version flag makes dispel to print the API version of its generated code, and exits. See the Version constant in the github.com/vincent-petithory/dispel package for its meaning.
+
 The -v flag makes dispel more verbose about what the entities it discovers while parsing the json schema.
 
 The -t flag specifies which templates to execute, with a comma-separated list of template names.

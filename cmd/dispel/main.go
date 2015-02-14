@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"go/format"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -25,6 +24,7 @@ var (
 	pkgname             string
 	altFormatPath       string
 	verbose             bool
+	showVersion         bool
 )
 
 //go:generate go run gendoc.go -helpvar
@@ -39,10 +39,11 @@ func init() {
 	flag.StringVar(&pkgname, "pn", "", "")
 	flag.StringVar(&altFormatPath, "f", "", "")
 	flag.BoolVar(&verbose, "v", false, "")
+	flag.BoolVar(&showVersion, "version", false, "")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: dispel [-t names] [-d names] [-p prefix] [-hrt typename] [-pp packagepath] [-pn packagename] [-f path] [-v] SCHEMA")
+		fmt.Fprintln(os.Stderr, "usage: dispel [--version] [-t names] [-d names] [-p prefix] [-hrt typename] [-pp packagepath] [-pn packagename] [-f path] [-v] SCHEMA")
 		fmt.Fprintln(os.Stderr)
-		io.WriteString(os.Stderr, helptext)
+		fmt.Fprint(os.Stderr, helptext)
 	}
 }
 
@@ -69,6 +70,11 @@ func main() {
 	prgmName := filepath.Base(os.Args[0])
 	log.SetFlags(0)
 	log.SetPrefix(prgmName + ": ")
+
+	if showVersion {
+		fmt.Println(dispel.Version)
+		return
+	}
 
 	// Check envvars from go:generate are set
 	var pkgAbsPath string
@@ -187,7 +193,7 @@ func main() {
 
 	// Prepare context for template
 	ctx := &dispel.TemplateContext{
-		Prgm:                strings.Join(append([]string{prgmName}, os.Args[1:]...), " "),
+		Prgm:                fmt.Sprintf("%s %d", prgmName, dispel.Version),
 		PkgName:             pkgname,
 		Routes:              routes,
 		HandlerReceiverType: handlerReceiverType,
