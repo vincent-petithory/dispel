@@ -193,7 +193,7 @@ func main() {
 
 	// Prepare context for template
 	ctx := &dispel.TemplateContext{
-		Prgm:                fmt.Sprintf("%s %d", prgmName, dispel.Version),
+		Prgm:                fmt.Sprintf("%s v%d", prgmName, dispel.Version),
 		PkgName:             pkgname,
 		Routes:              routes,
 		HandlerReceiverType: handlerReceiverType,
