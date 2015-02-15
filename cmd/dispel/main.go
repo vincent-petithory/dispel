@@ -259,7 +259,7 @@ func main() {
 		if name == "" {
 			continue
 		}
-		if err := defaultImpl.ExecuteTemplate(&buf, name, ctx.PkgName); err != nil {
+		if err := defaultImpl.ExecuteTemplate(&buf, name, ctx.Prgm, ctx.PkgName); err != nil {
 			log.Fatal(err)
 		}
 		// Format source with gofmt

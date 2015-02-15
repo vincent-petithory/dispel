@@ -236,7 +236,7 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithAPI(t *testing.T) {
 			defaultImpl, err := dispel.NewDefaultImplBundle()
 			ok(tb, err)
 			for _, name := range defaultImpl.Names() {
-				ok(tb, defaultImpl.ExecuteTemplate(&buf, name, ctx.PkgName))
+				ok(tb, defaultImpl.ExecuteTemplate(&buf, name, ctx.Prgm, ctx.PkgName))
 				// Format source with gofmt
 				src, err := format.Source(buf.Bytes())
 				if err != nil {
