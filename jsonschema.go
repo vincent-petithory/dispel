@@ -957,7 +957,7 @@ func (sp *SchemaParser) JSONTypeFromSchema(defaultName string, schema *Schema, r
 			if err != nil {
 				return nil, err
 			}
-			typ, err := sp.JSONTypeFromSchema(propertyName, resPropertySchema, propertySchema.Ref)
+			typ, err := sp.JSONTypeFromSchema(symbolName(propertyName), resPropertySchema, propertySchema.Ref)
 			if err != nil {
 				return nil, err
 			}

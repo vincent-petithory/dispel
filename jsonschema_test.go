@@ -121,7 +121,7 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
 			{Name: "element", Type: JSONString{}},
 			{Name: "power", Type: JSONInteger{ref: "#/definitions/spell/definitions/power"}},
 			{Name: "all", Type: JSONBoolean{ref: "#/definitions/spell/definitions/all"}},
-			{Name: "combinable_spells", Type: JSONArray{Name: "combinable_spells", Items: JSONString{ref: "#/definitions/spell/definitions/name"}}},
+			{Name: "combinable_spells", Type: JSONArray{Name: "CombinableSpells", Items: JSONString{ref: "#/definitions/spell/definitions/name"}}},
 		},
 	}
 	sort.Sort(expectedObj.Fields)
@@ -503,4 +503,474 @@ func TestHRef2name(t *testing.T) {
 		ok(t, err)
 		equals(t, test.name, name)
 	}
+}
+
+func TestParseKrakenSchema(t *testing.T) {
+	schema := getSchema(t, "testdata/kraken.json")
+	expectedResourceRoutes := ResourceRoutes{
+		{
+			Path:        "/fileservers",
+			Name:        "fileservers",
+			RouteParams: []RouteParam{},
+			MethodRouteIOMap: MethodRouteIOMap{
+				"GET": RouteIO{
+					OutType: JSONArray{
+						Name:  "ListAllFileServerTypeOut",
+						Items: JSONString{ref: "#/definitions/fileservertype"},
+					},
+				},
+			},
+		},
+		{
+			Path:        "/servers",
+			Name:        "servers",
+			RouteParams: []RouteParam{},
+			MethodRouteIOMap: MethodRouteIOMap{
+				"POST": RouteIO{
+					InType: JSONObject{
+						Name: "CreateRandomServerIn",
+						Fields: JSONFieldList{
+							JSONField{
+								Name: "bind_address",
+								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+							},
+						},
+					},
+					OutType: JSONObject{
+						Name: "Server",
+						Fields: JSONFieldList{
+							JSONField{
+								Name: "bind_address",
+								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+							},
+							JSONField{
+								Name: "mounts",
+								Type: JSONArray{
+									Name: "ServerMounts",
+									ref:  "#/definitions/server/definitions/mounts",
+									Items: JSONObject{
+										Name: "Mount",
+										Fields: JSONFieldList{
+											JSONField{
+												Name: "id",
+												Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+											},
+											JSONField{
+												Name: "source",
+												Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+											},
+											JSONField{
+												Name: "target",
+												Type: JSONString{ref: "#/definitions/mount/definitions/target"}},
+										},
+										ref: "#/definitions/mount",
+									},
+								},
+							},
+							JSONField{
+								Name: "port",
+								Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
+							},
+						},
+						ref: "#/definitions/server",
+					},
+				},
+				"DELETE": RouteIO{
+					OutType: JSONArray{
+						Name: "DeleteAllServerOut",
+						ref:  "",
+						Items: JSONObject{
+							Name: "Server",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "bind_address",
+									Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+								},
+								JSONField{
+									Name: "mounts",
+									Type: JSONArray{
+										Name: "ServerMounts",
+										ref:  "#/definitions/server/definitions/mounts",
+										Items: JSONObject{
+											Name: "Mount",
+											Fields: JSONFieldList{
+												JSONField{
+													Name: "id",
+													Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+												},
+												JSONField{
+													Name: "source",
+													Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+												},
+												JSONField{
+													Name: "target",
+													Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+												},
+											},
+											ref: "#/definitions/mount",
+										},
+									},
+								},
+								JSONField{
+									Name: "port",
+									Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
+								},
+							},
+							ref: "#/definitions/server"},
+					},
+				},
+				"GET": RouteIO{
+					OutType: JSONArray{
+						Name: "ListAllServerOut",
+						Items: JSONObject{
+							Name: "Server",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "bind_address",
+									Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+								},
+								JSONField{
+									Name: "mounts",
+									Type: JSONArray{
+										Name: "ServerMounts",
+										ref:  "#/definitions/server/definitions/mounts",
+										Items: JSONObject{
+											Name: "Mount",
+											Fields: JSONFieldList{
+												JSONField{
+													Name: "id",
+													Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+												},
+												JSONField{
+													Name: "source",
+													Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+												},
+												JSONField{
+													Name: "target",
+													Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+												},
+											},
+											ref: "#/definitions/mount"},
+									},
+								},
+								JSONField{
+									Name: "port",
+									Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
+								},
+							},
+							ref: "#/definitions/server"},
+					},
+				},
+			},
+		},
+		{
+			Path: "/servers/{server-port}",
+			Name: "servers.one",
+			RouteParams: []RouteParam{
+				RouteParam{
+					Name:    "server-port",
+					Varname: "serverPort",
+					Type:    JSONInteger{ref: "#/definitions/server/definitions/port"},
+				},
+			},
+			MethodRouteIOMap: MethodRouteIOMap{
+				"DELETE": RouteIO{
+					OutType: JSONObject{
+						Name: "Server",
+						Fields: JSONFieldList{
+							JSONField{
+								Name: "bind_address",
+								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+							},
+							JSONField{
+								Name: "mounts",
+								Type: JSONArray{
+									Name: "ServerMounts",
+									ref:  "#/definitions/server/definitions/mounts",
+									Items: JSONObject{
+										Name: "Mount",
+										Fields: JSONFieldList{
+											JSONField{
+												Name: "id",
+												Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+											},
+											JSONField{
+												Name: "source",
+												Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+											},
+											JSONField{
+												Name: "target",
+												Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+											},
+										},
+										ref: "#/definitions/mount"},
+								},
+							},
+							JSONField{
+								Name: "port",
+								Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
+							},
+						},
+						ref: "#/definitions/server"},
+				},
+				"PUT": RouteIO{
+					InType: JSONObject{
+						Name: "CreateServerIn",
+						Fields: JSONFieldList{
+							JSONField{
+								Name: "bind_address",
+								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+							},
+						},
+						ref: "",
+					},
+					OutType: JSONObject{
+						Name: "Server",
+						Fields: JSONFieldList{
+							JSONField{
+								Name: "bind_address",
+								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+							},
+							JSONField{
+								Name: "mounts",
+								Type: JSONArray{
+									Name: "ServerMounts",
+									ref:  "#/definitions/server/definitions/mounts",
+									Items: JSONObject{
+										Name: "Mount",
+										Fields: JSONFieldList{
+											JSONField{
+												Name: "id",
+												Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+											},
+											JSONField{
+												Name: "source",
+												Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+											},
+											JSONField{
+												Name: "target",
+												Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+											},
+										},
+										ref: "#/definitions/mount"},
+								},
+							},
+							JSONField{
+								Name: "port",
+								Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
+							},
+						},
+						ref: "#/definitions/server",
+					},
+				},
+				"GET": RouteIO{
+					OutType: JSONObject{
+						Name: "Server",
+						Fields: JSONFieldList{
+							JSONField{
+								Name: "bind_address",
+								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+							},
+							JSONField{
+								Name: "mounts",
+								Type: JSONArray{
+									Name: "ServerMounts",
+									ref:  "#/definitions/server/definitions/mounts",
+									Items: JSONObject{
+										Name: "Mount",
+										Fields: JSONFieldList{
+											JSONField{
+												Name: "id",
+												Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+											},
+											JSONField{
+												Name: "source",
+												Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+											},
+											JSONField{
+												Name: "target",
+												Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+											},
+										},
+										ref: "#/definitions/mount",
+									},
+								},
+							},
+							JSONField{
+								Name: "port",
+								Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
+							},
+						},
+						ref: "#/definitions/server",
+					},
+				},
+			},
+		},
+		{
+			Path: "/servers/{server-port}/mounts",
+			Name: "servers.one.mounts",
+			RouteParams: []RouteParam{
+				RouteParam{
+					Name:    "server-port",
+					Varname: "serverPort",
+					Type:    JSONInteger{ref: "#/definitions/server/definitions/port"},
+				},
+			},
+			MethodRouteIOMap: MethodRouteIOMap{
+				"DELETE": RouteIO{
+					OutType: JSONArray{
+						Name: "DeleteAllMountOut",
+						Items: JSONObject{
+							Name: "Mount",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "id",
+									Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+								},
+								JSONField{
+									Name: "source",
+									Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+								},
+								JSONField{
+									Name: "target",
+									Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+								},
+							},
+							ref: "#/definitions/mount",
+						},
+					},
+				},
+				"POST": RouteIO{
+					InType: JSONObject{
+						Name: "CreateMountIn",
+						Fields: JSONFieldList{
+							JSONField{
+								Name: "fs_params",
+								Type: JSONObject{
+									Name: "FsParams",
+								},
+							},
+							JSONField{
+								Name: "fs_type",
+								Type: JSONString{},
+							},
+							JSONField{
+								Name: "source",
+								Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+							},
+							JSONField{
+								Name: "target",
+								Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+							},
+						},
+					},
+					OutType: JSONObject{
+						Name: "Mount",
+						Fields: JSONFieldList{
+							JSONField{
+								Name: "id",
+								Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+							},
+							JSONField{
+								Name: "source",
+								Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+							},
+							JSONField{
+								Name: "target",
+								Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+							},
+						},
+						ref: "#/definitions/mount",
+					},
+				},
+				"GET": RouteIO{
+					OutType: JSONArray{
+						Name: "ListAllMountOut",
+						Items: JSONObject{
+							Name: "Mount",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "id",
+									Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+								},
+								JSONField{
+									Name: "source",
+									Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+								},
+								JSONField{
+									Name: "target",
+									Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+								},
+							},
+							ref: "#/definitions/mount",
+						},
+					},
+				},
+			},
+		},
+		{
+			Path: "/servers/{server-port}/mounts/{mount-id}",
+			Name: "servers.one.mounts.one",
+			RouteParams: []RouteParam{
+				RouteParam{
+					Name:    "server-port",
+					Varname: "serverPort",
+					Type:    JSONInteger{ref: "#/definitions/server/definitions/port"},
+				},
+				RouteParam{
+					Name:    "mount-id",
+					Varname: "mountId",
+					Type:    JSONString{ref: "#/definitions/mount/definitions/id"},
+				},
+			},
+			MethodRouteIOMap: MethodRouteIOMap{
+				"GET": RouteIO{
+					OutType: JSONObject{
+						Name: "Mount",
+						Fields: JSONFieldList{
+							JSONField{
+								Name: "id",
+								Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+							},
+							JSONField{
+								Name: "source",
+								Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+							},
+							JSONField{
+								Name: "target",
+								Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+							},
+						},
+						ref: "#/definitions/mount",
+					},
+				},
+				"DELETE": RouteIO{
+					OutType: JSONObject{
+						Name: "Mount",
+						Fields: JSONFieldList{
+							JSONField{
+								Name: "id",
+								Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+							},
+							JSONField{
+								Name: "source",
+								Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+							},
+							JSONField{
+								Name: "target",
+								Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+							},
+						},
+						ref: "#/definitions/mount",
+					},
+				},
+			},
+		},
+	}
+	sort.Sort(expectedResourceRoutes)
+
+	sp := SchemaParser{RootSchema: schema}
+	routes, err := sp.ParseRoutes()
+	ok(t, err)
+	equals(t, expectedResourceRoutes, routes.ByResource())
 }
