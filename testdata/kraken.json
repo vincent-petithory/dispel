@@ -1,0 +1,238 @@
+{
+    "$schema": "http://json-schema.org/draft-04/hyper-schema",
+    "title": "Kraken API",
+    "type": "object",
+    "definitions": {
+        "server": {
+            "type": "object",
+            "definitions": {
+                "bindaddress": {
+                    "type": "string"
+                },
+                "port": {
+                    "type": "integer"
+                },
+                "mounts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/mount"
+                    }
+                }
+            },
+            "links": [
+                {
+                    "title": "List existing servers",
+                    "href": "/servers",
+                    "method": "GET",
+                    "rel": "list-all",
+                    "targetSchema": {
+                        "items": {
+                            "$ref": "#/definitions/server"
+                        },
+                        "type": "array"
+                    }
+                },
+                {
+                    "title": "Create a new server listening on a random port",
+                    "href": "/servers",
+                    "method": "POST",
+                    "rel": "create-random",
+                    "schema": {
+                        "properties": {
+                            "bind_address": {
+                                "$ref": "#/definitions/server/definitions/bindaddress"
+                            }
+                        }
+                    },
+                    "targetSchema": {
+                        "$ref": "#/definitions/server"
+                    }
+                },
+                {
+                    "title": "Delete all existing servers and all their mounts",
+                    "href": "/servers",
+                    "method": "DELETE",
+                    "rel": "delete-all",
+                    "targetSchema": {
+                        "items": {
+                            "$ref": "#/definitions/server"
+                        },
+                        "type": "array"
+                    }
+                },
+                {
+                    "title": "Info for a server",
+                    "href": "/servers/{(#/definitions/server/definitions/port)}",
+                    "method": "GET",
+                    "rel": "self",
+                    "targetSchema": {
+                        "$ref": "#/definitions/server"
+                    }
+                },
+                {
+                    "title": "Create a new server listening on a specific port",
+                    "href": "/servers/{(#/definitions/server/definitions/port)}",
+                    "method": "PUT",
+                    "rel": "create",
+                    "schema": {
+                        "properties": {
+                            "bind_address": {
+                                "$ref": "#/definitions/server/definitions/bindaddress"
+                            }
+                        }
+                    },
+                    "targetSchema": {
+                        "$ref": "#/definitions/server"
+                    }
+                },
+                {
+                    "title": "Delete an existing server and all its mounts",
+                    "href": "/servers/{(#/definitions/server/definitions/port)}",
+                    "method": "DELETE",
+                    "rel": "delete",
+                    "targetSchema": {
+                        "$ref": "#/definitions/server"
+                    }
+                }
+            ],
+            "properties": {
+                "bind_address": {
+                    "$ref": "#/definitions/server/definitions/bindaddress"
+                },
+                "port": {
+                    "$ref": "#/definitions/server/definitions/port"
+                },
+                "mounts": {
+                    "$ref": "#/definitions/server/definitions/mounts"
+                }
+            }
+        },
+        "mount": {
+            "type": "object",
+            "definitions": {
+                "id": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "target": {
+                    "type": "string"
+                }
+            },
+            "links": [
+                {
+                    "title": "List existing mounts for a server",
+                    "href": "/servers/{(#/definitions/server/definitions/port)}/mounts",
+                    "method": "GET",
+                    "rel": "list-all",
+                    "targetSchema": {
+                        "items": {
+                            "$ref": "#/definitions/mount"
+                        },
+                        "type": "array"
+                    }
+                },
+                {
+                    "title": "Create a new mount on a server",
+                    "href": "/servers/{(#/definitions/server/definitions/port)}/mounts",
+                    "method": "POST",
+                    "rel": "create",
+                    "schema": {
+                        "properties": {
+                            "target": {
+                                "$ref": "#/definitions/mount/definitions/target"
+                            },
+                            "source": {
+                                "$ref": "#/definitions/mount/definitions/source"
+                            },
+                            "fs_type": {
+                                "type": "string"
+                            },
+                            "fs_params": {
+                                "type": "object",
+                                "patternProperties": {
+                                    ".+": {
+					"type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "targetSchema": {
+                        "$ref": "#/definitions/mount"
+                    }
+                },
+                {
+                    "title": "Delete all existing mounts of a server",
+                    "href": "/servers/{(#/definitions/server/definitions/port)}/mounts",
+                    "method": "DELETE",
+                    "rel": "delete-all",
+                    "targetSchema": {
+                        "items": {
+                            "$ref": "#/definitions/mount"
+                        },
+                        "type": "array"
+                    }
+                },
+                {
+                    "title": "Info for a mount",
+                    "href": "/servers/{(#/definitions/server/definitions/port)}/mounts/{(#/definitions/mount/definitions/id)}",
+                    "method": "GET",
+                    "rel": "self",
+                    "targetSchema": {
+                        "$ref": "#/definitions/mount"
+                    }
+                },
+                {
+                    "title": "Delete an existing mount on a server",
+                    "href": "/servers/{(#/definitions/server/definitions/port)}/mounts/{(#/definitions/mount/definitions/id)}",
+                    "method": "DELETE",
+                    "rel": "delete",
+                    "targetSchema": {
+                        "$ref": "#/definitions/mount"
+                    }
+                }
+            ],
+            "properties": {
+                "id": {
+                    "$ref": "#/definitions/mount/definitions/id"
+                },
+                "source": {
+                    "$ref": "#/definitions/mount/definitions/source"
+                },
+                "target": {
+                    "$ref": "#/definitions/mount/definitions/target"
+                }
+            }
+        },
+        "fileservertype": {
+            "type": "string",
+            "links": [
+                {
+                    "title": "List existing file server types",
+                    "href": "/fileservers",
+                    "method": "GET",
+                    "rel": "list-all",
+                    "targetSchema": {
+                        "items": {
+                            "$ref": "#/definitions/fileservertype"
+                        },
+                        "type": "array"
+                    }
+                }
+            ]
+        }
+    },
+    "properties": {
+        "server": {
+            "$ref": "#/definitions/server"
+        },
+        "mount": {
+            "$ref": "#/definitions/mount"
+        },
+        "file-server-type": {
+            "$ref": "#/definitions/fileservertype"
+        }
+    }
+}
