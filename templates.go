@@ -94,9 +94,7 @@ func NewTemplateBundle(sp *SchemaParser) (*TemplateBundle, error) {
 	t := template.New("").Funcs(template.FuncMap{
 		"tolower":    strings.ToLower,
 		"capitalize": capitalize,
-		"symbolName": func(s string) string {
-			return capitalize(toUpperAfterAny(s, ".- "))
-		},
+		"symbolName": symbolName,
 		"hasItem": func(a []string, s string) bool {
 			for _, item := range a {
 				if s == item {
