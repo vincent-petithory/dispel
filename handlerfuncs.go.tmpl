@@ -2,7 +2,8 @@
 
 package {{ .PkgName }}
 
-import (
+{{ if allHandlerFuncsImplemented .Routes .ExistingHandlers }}// No default handler func was generated, because all are implemented.
+{{ else }}import (
 	"net/http"
 )
 
@@ -17,3 +18,4 @@ Generate in and out types*/}}{{ if $io.InType }}, vreq {{ printSmartDerefType $i
 }
 
 {{end}}{{end}}{{end}}{{end}}
+{{ end }}

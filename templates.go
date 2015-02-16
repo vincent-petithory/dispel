@@ -89,6 +89,10 @@ type TemplateContext struct {
 	sp *SchemaParser
 }
 
+func handlerFuncName(route Route) string {
+	return strings.ToLower(route.Method) + symbolName(route.Name)
+}
+
 // NewTemplateBundle returns a new Template based on the SchemaParser.
 func NewTemplateBundle(sp *SchemaParser) (*TemplateBundle, error) {
 	t := template.New("").Funcs(template.FuncMap{
@@ -102,6 +106,20 @@ func NewTemplateBundle(sp *SchemaParser) (*TemplateBundle, error) {
 				}
 			}
 			return false
+		},
+		"handlerFuncName": handlerFuncName,
+		"allHandlerFuncsImplemented": func(routes Routes, existingHandlers []string) bool {
+		LRoutesLoop:
+			for _, route := range routes {
+				fname := handlerFuncName(route)
+				for _, h := range existingHandlers {
+					if h == fname {
+						continue LRoutesLoop
+					}
+				}
+				return false
+			}
+			return true
 		},
 		"varname": func(s string) string {
 			var buf bytes.Buffer
