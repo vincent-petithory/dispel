@@ -89,8 +89,8 @@ type TemplateContext struct {
 	sp *SchemaParser
 }
 
-func handlerFuncName(route Route) string {
-	return strings.ToLower(route.Method) + symbolName(route.Name)
+func handlerFuncName(routeMethod string, routeName string) string {
+	return strings.ToLower(routeMethod) + symbolName(routeName)
 }
 
 // NewTemplateBundle returns a new Template based on the SchemaParser.
@@ -111,7 +111,7 @@ func NewTemplateBundle(sp *SchemaParser) (*TemplateBundle, error) {
 		"allHandlerFuncsImplemented": func(routes Routes, existingHandlers []string) bool {
 		LRoutesLoop:
 			for _, route := range routes {
-				fname := handlerFuncName(route)
+				fname := handlerFuncName(route.Method, route.Name)
 				for _, h := range existingHandlers {
 					if h == fname {
 						continue LRoutesLoop
