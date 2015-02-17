@@ -95,7 +95,20 @@ func handlerFuncName(routeMethod string, routeName string) string {
 
 // NewTemplateBundle returns a new Template based on the SchemaParser.
 func NewTemplateBundle(sp *SchemaParser) (*TemplateBundle, error) {
-	t := template.New("").Funcs(template.FuncMap{
+	t := template.New("").Funcs(NewTemplateFuncMap(sp))
+	for name, tmpl := range templatesMap {
+		var err error
+		t, err = t.New(name).Parse(tmpl)
+		if err != nil {
+			return nil, fmt.Errorf("template %s: %v", name, err)
+		}
+	}
+	return &TemplateBundle{t: t, sp: sp}, nil
+}
+
+// NewTemplateFuncMap returns the template.FuncMap used in a TemplateBundle.
+func NewTemplateFuncMap(sp *SchemaParser) template.FuncMap {
+	return template.FuncMap{
 		"tolower":    strings.ToLower,
 		"capitalize": capitalize,
 		"symbolName": symbolName,
@@ -154,13 +167,5 @@ func NewTemplateBundle(sp *SchemaParser) (*TemplateBundle, error) {
 			}
 			return sp.JSONToGoType(j, false)
 		},
-	})
-	for name, tmpl := range templatesMap {
-		var err error
-		t, err = t.New(name).Parse(tmpl)
-		if err != nil {
-			return nil, fmt.Errorf("template %s: %v", name, err)
-		}
 	}
-	return &TemplateBundle{t: t, sp: sp}, nil
 }
