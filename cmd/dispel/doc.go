@@ -56,7 +56,10 @@
 // 
 // The -f flag specifies the path to the file for an alternate format for the template to use, using the Go template syntax.
 // If the value is -, then the template is read from STDIN.
-// If set, then -t and -d flags are ignored: only this template is executed. The result is printed to STDOUT.
+// If set, then -t and -d flags are ignored: only this template is executed. The result is printed to what the -o flag is set to, which by default is STDOUT.
+// 
+// The -o flag is only useful when -f is specified. It specifies a path where to write the output from -f.
+// By default, its value is -, which means it writes to STDOUT.
 // 
 // The context passed to the template is TemplateContext.
 // 

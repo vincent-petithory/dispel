@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"go/format"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -23,6 +24,7 @@ var (
 	pkgpath             string
 	pkgname             string
 	altFormatPath       string
+	altFormatOutPath    string
 	verbose             bool
 	showVersion         bool
 )
@@ -38,10 +40,11 @@ func init() {
 	flag.StringVar(&pkgpath, "pp", "", "")
 	flag.StringVar(&pkgname, "pn", "", "")
 	flag.StringVar(&altFormatPath, "f", "", "")
+	flag.StringVar(&altFormatOutPath, "o", "-", "")
 	flag.BoolVar(&verbose, "v", false, "")
 	flag.BoolVar(&showVersion, "version", false, "")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: dispel [--version] [-t names] [-d names] [-p prefix] [-hrt typename] [-pp packagepath] [-pn packagename] [-f path] [-v] SCHEMA")
+		fmt.Fprintln(os.Stderr, "usage: dispel [--version] [-t names] [-d names] [-p prefix] [-hrt typename] [-pp packagepath] [-pn packagename] [-f path] [-o path] [-v] SCHEMA")
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprint(os.Stderr, helptext)
 	}
@@ -216,7 +219,19 @@ func main() {
 			}
 			altFormat = string(b)
 		}
-		if err := t.ExecuteCustomTemplate(os.Stdout, altFormat, ctx); err != nil {
+
+		var out io.Writer
+		if altFormatOutPath == "-" {
+			out = os.Stdout
+		} else {
+			f, err := os.Create(altFormatOutPath)
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer f.Close()
+			out = f
+		}
+		if err := t.ExecuteCustomTemplate(out, altFormat, ctx); err != nil {
 			log.Fatal(err)
 		}
 		return
