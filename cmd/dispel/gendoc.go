@@ -79,7 +79,12 @@ func generateGodoc() error {
 
 	scanner := bufio.NewScanner(&buf)
 	for scanner.Scan() {
-		fmt.Fprintf(f, "// %s\n", scanner.Text())
+		text := scanner.Text()
+		if text == "" {
+			fmt.Fprintln(f, "//")
+		} else {
+			fmt.Fprintf(f, "// %s\n", scanner.Text())
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		return err
