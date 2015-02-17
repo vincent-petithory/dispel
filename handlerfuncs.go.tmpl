@@ -8,7 +8,7 @@ package {{ .PkgName }}
 )
 
 {{/* Generate a function for each method+resource */}}
-{{ $handlerReceiverType := .HandlerReceiverType }}{{ $existingHandlers := .ExistingHandlers }}{{ range .Routes.ByResource }}{{ $route := . }}{{ range .Methods }}{{ $lmethod := . | tolower }}{{ $io := index $route.MethodRouteIOMap . }}{{/*
+{{ $handlerReceiverType := .HandlerReceiverType }}{{ $existingHandlers := .ExistingHandlers }}{{ range .Routes.ByResource }}{{ $route := . }}{{ range .Methods }}{{ $io := index $route.MethodRouteIOMap . }}{{/*
 */}}{{ with $funcName := (handlerFuncName . $route.Name) }}{{/*
 Do not generate the handler if it's already present in the package
 */}}{{ if not (hasItem $existingHandlers $funcName) }}{{/*
