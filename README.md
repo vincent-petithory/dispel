@@ -14,3 +14,11 @@ Command documentation: [![GoDoc](https://godoc.org/github.com/vincent-petithory/
 * fetching referenced $schema _NOT_ supported
 * absolute references
 * reference to property of instance schema
+
+## TODO
+
+ * [ ] Ignore resources with MediaType not application/json
+ * [ ] Add var type to route param
+ * [ ] Preserve order of json object keys in structs
+ * [ ] allow customize generate names. Possible solutions: text/template or program through stdin, stdout?
+ * [ ] generate blank project to serve as godoc documentation for interfaces and default implementations
