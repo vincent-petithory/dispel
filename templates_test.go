@@ -120,6 +120,14 @@ type HandlerRegisterer interface {
     RegisterHandler(routeName string, handler http.Handler)
 }
 
+// registerHandlerFunc is an adapter to use funcs as HandlerRegisterer. 
+type registerHandlerFunc func(routeName string, handler http.Handler)
+
+// RegisterHandler calls f(routeName, handler).
+func (f registerHandlerFunc) RegisterHandler(routeName string, handler http.Handler) {
+	f(routeName, handler)
+}
+
 // RouteParamGetter is the interface implemented by objects that can retrieve
 // the value of a parameter of a route, by name.
 type RouteParamGetter interface {
