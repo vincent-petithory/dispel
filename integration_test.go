@@ -359,7 +359,7 @@ import (
 type Character struct {
     Level int   `+"`"+`json:"level"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`
-    Spells CharacterSpells   `+"`"+`json:"spells"`+"`"+`
+    Spells []Spell   `+"`"+`json:"spells"`+"`"+`
     CreatedAt time.Time   `+"`"+`json:"createdAt"`+"`"+`
 }
 

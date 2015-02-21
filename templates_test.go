@@ -229,7 +229,7 @@ import (
     "net/http"
 )
 
-func (a *App) getSpells(w http.ResponseWriter, r *http.Request) (int, ListSpellOut, error) {
+func (a *App) getSpells(w http.ResponseWriter, r *http.Request) (int, []Spell, error) {
     return http.StatusNotImplemented, nil, nil
 }
 
@@ -274,8 +274,6 @@ func TestTemplateTypesOneResource(t *testing.T) {
 
 package %s
 
-type ListSpellOut []Spell
-
 type Spell struct {
     All bool     `+"`"+`json:"all"`+"`"+`
     Element string `+"`"+`json:"element"`+"`"+`
@@ -318,23 +316,17 @@ package %s
 type Character struct {
     Level int   `+"`"+`json:"level"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`
-    Spells CharacterSpells   `+"`"+`json:"spells"`+"`"+`
+    Spells []Spell   `+"`"+`json:"spells"`+"`"+`
 }
-
-type CharacterSpells []Spell
 
 type CreateCharacterIn struct {
     Name string    `+"`"+`json:"name"`+"`"+`
 }
 
-type ListCharacterOut []ListCharacterOutOne
-
 type ListCharacterOutOne struct {
     Level int   `+"`"+`json:"level"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`
 }
-
-type ListSpellOut []Spell
 
 type Spell struct {
     Element string `+"`"+`json:"element"`+"`"+`
@@ -395,7 +387,7 @@ Request: empty
 
 Response: 
 
-ListCharacterOut
+[]ListCharacterOutOne
 
 POST /characters
 
@@ -439,7 +431,7 @@ Request: empty
 
 Response: 
 
-ListSpellOut
+[]Spell
 
 POST /spells
 

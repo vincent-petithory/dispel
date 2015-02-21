@@ -711,6 +711,12 @@ func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
 		if n.TypeName() == "" {
 			log.Panicf("no unnamed type should exist")
 		}
+		// we don't want a type with a slice as underlying type.
+		// See https://golang.org/ref/spec#Assignability
+		a, ok := jt.(JSONArray)
+		if ok {
+			return fmt.Sprintf("[]%s", sp.JSONToGoType(a.Items, false))
+		}
 		return symbolName(n.TypeName())
 	}
 	switch j := jt.(type) {
@@ -726,7 +732,16 @@ func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
 		var buf bytes.Buffer
 		_, _ = buf.WriteString("struct {\n")
 		for _, f := range j.Fields {
-			fmt.Fprintf(&buf, "%s %s `json:\"%s\"`\n", symbolName(f.Name), sp.JSONToGoType(f.Type, false), f.Name)
+			// we don't want a type with a slice as underlying type.
+			// See https://golang.org/ref/spec#Assignability
+			a, ok := f.Type.(JSONArray)
+			var fieldTypeName string
+			if ok {
+				fieldTypeName = fmt.Sprintf("[]%s", sp.JSONToGoType(a.Items, false))
+			} else {
+				fieldTypeName = sp.JSONToGoType(f.Type, false)
+			}
+			fmt.Fprintf(&buf, "%s %s `json:\"%s\"`\n", symbolName(f.Name), fieldTypeName, f.Name)
 		}
 		_, _ = buf.WriteString("}")
 		return buf.String()

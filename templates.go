@@ -154,6 +154,12 @@ func NewTemplateFuncMap(sp *SchemaParser) template.FuncMap {
 			return buf.String()
 		},
 		"printTypeDef": func(j JSONType) string {
+			// we don't want type with a slice as underlying type.
+			// See https://golang.org/ref/spec#Assignability
+			_, ok := j.(JSONArray)
+			if ok {
+				return ""
+			}
 			return fmt.Sprintf("type %s %s", sp.JSONToGoType(j, false), sp.JSONToGoType(j, true))
 		},
 		"printTypeName": func(j JSONType) string {
@@ -161,8 +167,8 @@ func NewTemplateFuncMap(sp *SchemaParser) template.FuncMap {
 		},
 		"printSmartDerefType": func(j JSONType) string {
 			// really smart
-			switch j.(type) {
-			case JSONObject:
+			_, ok := j.(JSONObject)
+			if ok {
 				return "*" + sp.JSONToGoType(j, false)
 			}
 			return sp.JSONToGoType(j, false)
