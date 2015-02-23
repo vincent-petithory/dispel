@@ -877,6 +877,7 @@ func (a *App) postFiles(w http.ResponseWriter, r *http.Request) (int, *File, err
 }
 
 func (a *App) getFilesOne(w http.ResponseWriter, r *http.Request, fileId string) (int, error) {
+	http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
 	return http.StatusNotImplemented, nil
 }
 `, ctx.Prgm, ctx.PkgName)))

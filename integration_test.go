@@ -487,6 +487,7 @@ func testFilesSchemaAPINoImpl(tb testing.TB, apiURL *url.URL) {
 	}{
 		{Method: "POST", Path: "/files", Body: []byte(`hello dispel!`), Code: 501},
 		{Method: "GET", Path: "/files", Code: 501},
+		{Method: "GET", Path: "/files/560edea", Code: 501},
 	}
 	for _, test := range tests {
 		u := &(*apiURL)

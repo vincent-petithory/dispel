@@ -14,7 +14,8 @@ Do not generate the handler if it's already present in the package
 */}}{{ if not (hasItem $existingHandlers $funcName) }}{{/*
 */}}func ({{ varname $handlerReceiverType }} {{ $handlerReceiverType }}) {{ $funcName }}(w http.ResponseWriter, r *http.Request{{ range $route.RouteParams }}, {{ .Varname }} string{{end}}{{/*
 Generate in and out types*/}}{{ if $io.InType }}, vreq {{ printSmartDerefType $io.InType }}{{end}}) (int{{ if $io.OutType }}, {{ printSmartDerefType $io.OutType }}{{end}}, error) {
-	return http.StatusNotImplemented{{ if $io.OutType }}, nil{{end}}, nil
+	{{ if $io.OutputIsNotJSON }}http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
+{{ end }}	return http.StatusNotImplemented{{ if $io.OutType }}, nil{{end}}, nil
 }
 
 {{end}}{{end}}{{end}}{{end}}
