@@ -78,6 +78,23 @@ type Link struct {
 	MediaType    string  `json:"mediaType,omitempty"`
 }
 
+func (l *Link) ApplyDefaults() {
+	if l.EncType == "" {
+		l.EncType = "application/json"
+	}
+	if l.MediaType == "" {
+		l.MediaType = "application/json"
+	}
+}
+
+func (l Link) ReceivesJSON() bool {
+	return strings.HasPrefix(l.EncType, "application/json")
+}
+
+func (l Link) SendsJSON() bool {
+	return strings.HasPrefix(l.MediaType, "application/json")
+}
+
 // Route represents an HTTP endpoint for a resource, with JSON on the wire.
 type Route struct {
 	Path        string
@@ -89,6 +106,8 @@ type Route struct {
 
 // RouteIO represents JSON types for input and output.
 type RouteIO struct {
+	InputIsNotJSON  bool
+	OutputIsNotJSON bool
 	// InType is the JSON type coming in.
 	InType JSONType
 	// OutType is the JSON type coming out.
@@ -808,6 +827,8 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 		}
 		linksRelAttr := make(map[string]bool)
 		for _, link := range resProperty.Links {
+			link.ApplyDefaults()
+
 			if exists := linksRelAttr[link.Rel]; exists {
 				return nil, InvalidSchemaError{*property, fmt.Sprintf("duplicate link \"rel\" %s", link.Rel)}
 			}
@@ -827,6 +848,10 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 				Method: strings.ToUpper(link.Method),
 			}
 			sp.logf("discovered route %s -> %s %q ", route.Name, route.Method, route.Path)
+
+			route.InputIsNotJSON = !link.ReceivesJSON()
+			route.OutputIsNotJSON = !link.SendsJSON()
+
 			rp, err := sp.RouteParamsFromLink(&link, resProperty)
 			if err != nil {
 				return nil, err
@@ -835,7 +860,9 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 				rp = make([]RouteParam, 0)
 			}
 			route.RouteParams = rp
-			if link.Schema != nil {
+
+			// Ignore link input if it's not receiving application/json
+			if link.Schema != nil && link.ReceivesJSON() {
 				inType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sIn", symbolName(link.Rel), symbolName(propertyName)), link.Schema, link.Schema.Ref)
 				if err != nil {
 					return nil, err
@@ -843,7 +870,8 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 				route.InType = inType
 				sp.logf(" --> found input type %s", inType.Type())
 			}
-			if link.TargetSchema != nil {
+			// Ignore link output if it's not sending application/json
+			if link.TargetSchema != nil && link.SendsJSON() {
 				outType, err := sp.JSONTypeFromSchema(fmt.Sprintf("%s%sOut", symbolName(link.Rel), symbolName(propertyName)), link.TargetSchema, link.TargetSchema.Ref)
 				if err != nil {
 					return nil, err

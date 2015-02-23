@@ -1,0 +1,73 @@
+{
+    "$schema": "http://json-schema.org/draft-04/hyper-schema",
+    "title": "Test API",
+    "type": "object",
+    "definitions": {
+        "file": {
+            "description": "A file is a file resource.",
+            "title": "Solidwind API - Data File",
+            "type": "object",
+            "definitions": {
+                "id": {
+                    "type": "string"
+                },
+                "contenttype": {
+                    "type": "string"
+                },
+                "creationdate": {
+                    "description": "the datetime on which the file was added",
+                    "type": "string",
+                    "format": "date-time",
+                    "example": "2012-01-01T12:00:00Z"
+                }
+            },
+            "links": [
+                {
+                    "encType": "application/octet-stream",
+                    "title": "Create a new file using a raw binary body.",
+                    "href": "/files",
+                    "method": "POST",
+                    "rel": "create",
+                    "targetSchema": {
+                        "$ref": "#/definitions/file"
+                    }
+                },
+                {
+                    "title": "List existing files",
+                    "href": "/files",
+                    "method": "GET",
+                    "rel": "list",
+                    "targetSchema": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/file"
+                        }
+                    }
+                },
+                {
+                    "mediaType": "application/octet-stream",
+                    "title": "Binary data of an existing file.",
+                    "href": "/files/{(#/definitions/file/definitions/id)}",
+                    "method": "GET",
+                    "rel": "self"
+                }
+            ],
+            "properties": {
+                "id": {
+                    "$ref": "#/definitions/file/definitions/id"
+                },
+                "content_type": {
+                    "$ref": "#/definitions/file/definitions/contenttype"
+                },
+                "creation_date": {
+                    "$ref": "#/definitions/file/definitions/creationdate"
+                }
+            }
+        }
+    },
+    "properties": {
+        "file": {
+            "$ref": "#/definitions/file"
+        }
+    }
+}

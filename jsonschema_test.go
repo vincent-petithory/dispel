@@ -974,3 +974,66 @@ func TestParseKrakenSchema(t *testing.T) {
 	ok(t, err)
 	equals(t, expectedResourceRoutes, routes.ByResource())
 }
+
+func TestParseSchemaWithNonJSONEndpoints(t *testing.T) {
+	schema := getSchema(t, "testdata/files.json")
+
+	expectedRoutes := Routes{
+		{
+			Path:        "/files",
+			Name:        "files",
+			RouteParams: []RouteParam{},
+			Method:      "POST",
+			RouteIO: RouteIO{
+				InputIsNotJSON: true,
+				OutType: JSONObject{
+					Name: "File",
+					ref:  "#/definitions/file",
+					Fields: JSONFieldList{ // .Name natural sort
+						{Name: "content_type", Type: JSONString{ref: "#/definitions/file/definitions/contenttype"}},
+						{Name: "creation_date", Type: JSONString{ref: "#/definitions/file/definitions/creationdate"}},
+						{Name: "id", Type: JSONString{ref: "#/definitions/file/definitions/id"}},
+					},
+				},
+			},
+		},
+		{
+			Path:        "/files",
+			Name:        "files",
+			RouteParams: []RouteParam{},
+			Method:      "GET",
+			RouteIO: RouteIO{
+				OutType: JSONArray{
+					Name: "ListFileOut",
+					ref:  "",
+					Items: JSONObject{
+						Name: "File",
+						ref:  "#/definitions/file",
+						Fields: JSONFieldList{ // .Name natural sort
+							{Name: "content_type", Type: JSONString{ref: "#/definitions/file/definitions/contenttype"}},
+							{Name: "creation_date", Type: JSONString{ref: "#/definitions/file/definitions/creationdate"}},
+							{Name: "id", Type: JSONString{ref: "#/definitions/file/definitions/id"}},
+						},
+					},
+				},
+			},
+		},
+		{
+			Path: "/files/{file-id}",
+			Name: "files.one",
+			RouteParams: []RouteParam{
+				{Name: "file-id", Varname: "fileId", Type: JSONString{ref: "#/definitions/file/definitions/id"}},
+			},
+			Method: "GET",
+			RouteIO: RouteIO{
+				OutputIsNotJSON: true,
+			},
+		},
+	}
+	sort.Sort(expectedRoutes)
+
+	sp := SchemaParser{RootSchema: schema}
+	routes, err := sp.ParseRoutes()
+	ok(t, err)
+	equals(t, expectedRoutes, routes)
+}
