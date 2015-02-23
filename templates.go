@@ -153,6 +153,24 @@ func NewTemplateFuncMap(sp *SchemaParser) template.FuncMap {
 			}
 			return buf.String()
 		},
+		"typeImports": func(routes Routes) []string {
+			var imports []string
+			for _, route := range routes {
+				for _, typ := range []JSONType{route.InType, route.OutType} {
+					if typ == nil {
+						continue
+					}
+					routes.walkType(typ, func(jt JSONType) {
+						_, ok := jt.(JSONDateTime)
+						if ok {
+							imports = append(imports, "time")
+						}
+					})
+				}
+			}
+			sort.Strings(imports)
+			return imports
+		},
 		"printTypeDef": func(j JSONType) string {
 			// we don't want type with a slice as underlying type.
 			// See https://golang.org/ref/spec#Assignability

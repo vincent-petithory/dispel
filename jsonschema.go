@@ -153,18 +153,8 @@ func (routes Routes) ByResource() ResourceRoutes {
 	return resourceRoutes
 }
 
-func (routes Routes) walkType(typ JSONType, walkFn func(jtn JSONTypeNamer)) {
-	t, ok := typ.(TypeNamer)
-	if !ok {
-		return
-	}
-	tn := t.TypeName()
-	// Skip anonymous types
-	if tn == "" {
-		log.Panicf("no unnamed type should exist")
-		return
-	}
-	walkFn(t.(JSONTypeNamer))
+func (routes Routes) walkType(typ JSONType, walkFn func(JSONType)) {
+	walkFn(typ)
 	switch j := typ.(type) {
 	case JSONObject:
 		for _, field := range j.Fields {
@@ -185,8 +175,17 @@ func (routes Routes) JSONNamedTypes() []JSONTypeNamer {
 			if typ == nil {
 				continue
 			}
-			routes.walkType(typ, func(jtn JSONTypeNamer) {
+			routes.walkType(typ, func(jt JSONType) {
+				jtn, ok := jt.(JSONTypeNamer)
+				if !ok {
+					return
+				}
 				tn := jtn.TypeName()
+				// Skip anonymous types
+				if tn == "" {
+					log.Panicf("no unnamed type should exist")
+					return
+				}
 				if ok := visited[tn]; !ok {
 					visited[tn] = true
 					a = append(a, jtn)
@@ -690,6 +689,22 @@ func (n JSONNull) Ref() string {
 	return n.ref
 }
 
+// JSONDateTime represents the string primitive type of the JSON format.
+// Its underlying time is a RFC3339 date time.
+type JSONDateTime struct {
+	ref string
+}
+
+// Type implements Type() of the JSONType interface.
+func (dt JSONDateTime) Type() string {
+	return "date-time"
+}
+
+// Ref implements Ref() of the JSONType interface.
+func (dt JSONDateTime) Ref() string {
+	return dt.ref
+}
+
 // JSONField represents one property of a JSONObject.
 type JSONField struct {
 	Name string
@@ -741,6 +756,8 @@ func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
 	switch j := jt.(type) {
 	case JSONString:
 		return "string"
+	case JSONDateTime:
+		return "time.Time"
 	case JSONBoolean:
 		return "bool"
 	case JSONInteger:
@@ -1032,6 +1049,9 @@ func (sp *SchemaParser) JSONTypeFromSchema(defaultName string, schema *Schema, r
 			return nil, err
 		}
 		return JSONArray{Name: name, ref: ref, Items: jst}, nil
+	case t == "string" && resSchema.Format == "date-time":
+		jt = JSONDateTime{ref: ref}
+		return
 	case t == "string":
 		jt = JSONString{ref: ref}
 		return
@@ -1107,7 +1127,11 @@ func (sp *SchemaParser) checkNamedTypeRedefinitions(routes Routes) (map[string][
 			if typ == nil {
 				continue
 			}
-			routes.walkType(typ, func(jtn JSONTypeNamer) {
+			routes.walkType(typ, func(jt JSONType) {
+				jtn, ok := jt.(JSONTypeNamer)
+				if !ok {
+					return
+				}
 				tn := jtn.TypeName()
 				if fjtn, ok := definitions[tn]; !ok {
 					definitions[tn] = jtn

@@ -43,6 +43,10 @@ func TestParseSimpleJSONStruct(t *testing.T) {
         },
         "all": {
             "type": "boolean"
+        },
+        "level_on": {
+            "type": "string",
+            "format": "date-time"
         }
     }
 }`)
@@ -54,6 +58,7 @@ func TestParseSimpleJSONStruct(t *testing.T) {
 			{Name: "element", Type: JSONString{}},
 			{Name: "power", Type: JSONInteger{}},
 			{Name: "all", Type: JSONBoolean{}},
+			{Name: "level_on", Type: JSONDateTime{}},
 		},
 	}
 	sort.Sort(expectedObj.Fields)
@@ -991,7 +996,7 @@ func TestParseSchemaWithNonJSONEndpoints(t *testing.T) {
 					ref:  "#/definitions/file",
 					Fields: JSONFieldList{ // .Name natural sort
 						{Name: "content_type", Type: JSONString{ref: "#/definitions/file/definitions/contenttype"}},
-						{Name: "creation_date", Type: JSONString{ref: "#/definitions/file/definitions/creationdate"}},
+						{Name: "creation_date", Type: JSONDateTime{ref: "#/definitions/file/definitions/creationdate"}},
 						{Name: "id", Type: JSONString{ref: "#/definitions/file/definitions/id"}},
 					},
 				},
@@ -1011,7 +1016,7 @@ func TestParseSchemaWithNonJSONEndpoints(t *testing.T) {
 						ref:  "#/definitions/file",
 						Fields: JSONFieldList{ // .Name natural sort
 							{Name: "content_type", Type: JSONString{ref: "#/definitions/file/definitions/contenttype"}},
-							{Name: "creation_date", Type: JSONString{ref: "#/definitions/file/definitions/creationdate"}},
+							{Name: "creation_date", Type: JSONDateTime{ref: "#/definitions/file/definitions/creationdate"}},
 							{Name: "id", Type: JSONString{ref: "#/definitions/file/definitions/id"}},
 						},
 					},

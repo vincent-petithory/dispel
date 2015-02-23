@@ -430,3 +430,76 @@ func testRPGSchemaAPINoImpl(tb testing.TB, apiURL *url.URL) {
 		assert(tb, resp.StatusCode == test.Code, "%s %q responded with %d", test.Method, test.Path, resp.StatusCode)
 	}
 }
+
+// TestGenerateAllFromFilesJSONSchemaNoUserImplWithGoGenerate tests an API with non-JSON endpoints,
+// and also serves at testing that importing the time is done when a type requires a time.Time.
+func TestGenerateAllFromFilesJSONSchemaNoUserImplWithGoGenerate(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test")
+	}
+	it := &IntegrationTest{
+		InstallFn: func(tb testing.TB, workspacedir string, pkgdir string) {
+			installDispelCmd := exec.Command("go", "install", "-v", "github.com/vincent-petithory/dispel/...")
+			out, err := installDispelCmd.CombinedOutput()
+			if err != nil {
+				tb.Fatalf("%s\n\ngo install: %v", string(out), err)
+			}
+
+			_, err = exec.LookPath("dispel")
+			ok(tb, err)
+
+			ok(tb, copyFile(filepath.Join(pkgdir, "schema.json"), "testdata/files.json"))
+
+			data := fmt.Sprintf("package main\n\n//go:generate %s\n", strings.Join([]string{
+				"dispel",
+				"-t", "all",
+				"-hrt", "*App",
+				"-d", "all",
+				"schema.json",
+			}, " "))
+
+			ok(tb, ioutil.WriteFile(filepath.Join(pkgdir, "dispelgen.go"), []byte(data), 0666))
+
+			pkgname, err := filepath.Rel(filepath.Join(workspacedir, "src"), pkgdir)
+			ok(tb, err)
+			goGenerateCmd := exec.Command(
+				"go", "generate", "-x", pkgname,
+			)
+			goGenerateCmd.Env = makeGopathEnv(workspacedir)
+
+			out, err = goGenerateCmd.CombinedOutput()
+			if err != nil {
+				tb.Fatalf("%s\n\ngo:generate: %v", string(out), err)
+			}
+		},
+		TestFn: testFilesSchemaAPINoImpl,
+	}
+	it.Run(t)
+}
+
+func testFilesSchemaAPINoImpl(tb testing.TB, apiURL *url.URL) {
+	// Test endpoints return the expected status code, for the default implementations.
+	tests := []struct {
+		Method string
+		Path   string
+		Body   []byte
+		Code   int
+	}{
+		{Method: "POST", Path: "/files", Body: []byte(`hello dispel!`), Code: 501},
+		{Method: "GET", Path: "/files", Code: 501},
+	}
+	for _, test := range tests {
+		u := &(*apiURL)
+		u.Path = test.Path
+		var body io.Reader
+		if test.Body != nil {
+			body = bytes.NewReader(test.Body)
+		}
+		req, err := http.NewRequest(test.Method, u.String(), body)
+		ok(tb, err)
+		resp, err := http.DefaultClient.Do(req)
+		ok(tb, err)
+		resp.Body.Close()
+		assert(tb, resp.StatusCode == test.Code, "%s %q responded with %d", test.Method, test.Path, resp.StatusCode)
+	}
+}
