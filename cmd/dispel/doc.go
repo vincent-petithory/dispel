@@ -78,14 +78,17 @@
 //
 // The template has those functions available:
 //
-//  * tolower            : calls strings.ToLower
-//  * capitalize         : uppercase the first rune of a string
-//  * symbolName         : uppercase each rune following one of ".- ", then uppercase the first rune 
-//  * hasItem            : takes 2 arguments: ([]string, string); returns true if string is one of the elements of []string
-//  * varname            : creates a short variable name from a type. e.g MyLongType would return mlt
-//  * printTypeDef       : prints a valid Go type from a JSONType
-//  * printTypeName      : prints the name of the Go type for a JSONType
-//  * printSmartDerefType: is like printTypeName, but if the argument is a JSONObject, it return *TheType instead of TheType.
+//  * tolower                   : calls strings.ToLower
+//  * capitalize                : uppercase the first rune of a string
+//  * symbolName                : uppercase each rune following one of ".- ", then uppercase the first rune 
+//  * hasItem                   : takes 2 arguments: ([]string, string); returns true if string is one of the elements of []string
+//  * handlerFuncName           : the handler func name for a route method and name
+//  * allHandlerFuncsImplemented: returns true if all handler funcs are implemented in the target package
+//  * varname                   : creates a short variable name from a type. e.g MyLongType would return mlt
+//  * typeImports               : returns a slice of imports required by the generated types
+//  * printTypeDef              : prints a valid Go type from a JSONType
+//  * printTypeName             : prints the name of the Go type for a JSONType
+//  * printSmartDerefType       : is like printTypeName, but if the argument is a JSONObject, it return *TheType instead of TheType.
 //
 // For more information, see the documentation of the github.com/vincent-petithory/dispel package's TemplateContext type.
 package main
