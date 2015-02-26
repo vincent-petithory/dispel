@@ -80,6 +80,7 @@ The template has those functions available:
  * allHandlerFuncsImplemented: returns true if all handler funcs are implemented in the target package
  * varname                   : creates a short variable name from a type. e.g MyLongType would return mlt
  * typeImports               : returns a slice of imports required by the generated types
+ * typeNeedsAddr             : returns true if it is needed to get the addr of a type when used as an argument of a func
  * printTypeDef              : prints a valid Go type from a JSONType
  * printTypeName             : prints the name of the Go type for a JSONType
  * printSmartDerefType       : is like printTypeName, but if the argument is a JSONObject, it return *TheType instead of TheType.

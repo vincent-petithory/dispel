@@ -180,6 +180,14 @@ func NewTemplateFuncMap(sp *SchemaParser) template.FuncMap {
 			}
 			return fmt.Sprintf("type %s %s", sp.JSONToGoType(j, false), sp.JSONToGoType(j, true))
 		},
+		"typeNeedsAddr": func(j JSONType) bool {
+			switch j.(type) {
+			case JSONArray:
+				return false
+			default:
+				return true
+			}
+		},
 		"printTypeName": func(j JSONType) string {
 			return sp.JSONToGoType(j, false)
 		},
