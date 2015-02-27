@@ -96,7 +96,7 @@ func main() {
 		pkgAbsPath = filepath.Dir(p)
 	default:
 		flag.Usage()
-		log.Fatal("no package found: $GOFILE or --pkgpath must be set")
+		log.Fatal("no package found: $GOFILE or -pp must be set")
 	}
 	switch {
 	case pkgname != "":
@@ -104,7 +104,7 @@ func main() {
 		pkgname = os.Getenv("GOPACKAGE")
 	default:
 		flag.Usage()
-		log.Fatal("no package name found: $GOPACKAGE or --pkgname must be set")
+		log.Fatal("no package name found: $GOPACKAGE or --pn must be set")
 	}
 
 	// Abort if the generated files' prefix is empty
