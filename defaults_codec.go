@@ -60,12 +60,21 @@ func (j *JSONCodec) Encode(w http.ResponseWriter, r *http.Request, data interfac
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
-	if r.Method != "HEAD" {
+	switch {
+	case code >= 100 && code <= 199:
+		return nil
+	case code == 204:
+		return nil
+	case code == 304:
+		return nil
+	case r.Method == "HEAD":
+		return nil
+	default:
 		if _, err := w.Write(b); err != nil {
 			return err
 		}
+		return nil
 	}
-	return nil
 }
 
 func (j *JSONCodec) Decode(w http.ResponseWriter, r *http.Request, data interface{}) error {
