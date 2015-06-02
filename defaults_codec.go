@@ -9,8 +9,10 @@ import (
 	"net/http"
 )
 
-type JSONCodec struct {
-}
+// JSONCodec represents a codec for http request decoding and response encoding using JSON.
+//
+// JSONCodec relies on encoding/json in its implementation.
+type JSONCodec struct{}
 
 func handleEtag(w http.ResponseWriter, r *http.Request) (ok bool) {
 	if r.Method != "GET" && r.Method != "HEAD" {
@@ -40,6 +42,15 @@ func makeEtag(b []byte) string {
 	return `"` + base64.StdEncoding.EncodeToString(h.Sum(nil)) + `"`
 }
 
+// Encode implements the HTTPEncoder interface with JSON encoding.
+//
+// It writes to the response writer using
+// encoding/json.Marshal(), handles Etags, sets inconditionnally a "application/json; charset=utf-8" Content-Type header.
+// It skips writing a response body if any of the conditions are met:
+//
+//  * the status code is [100, 200)
+//  * the status code is http.StatusNoContent (204) or http.StatusNotModified (304)
+//  * the request method is HEAD.
 func (j *JSONCodec) Encode(w http.ResponseWriter, r *http.Request, data interface{}, code int) error {
 	b, err := json.Marshal(data)
 	if err != nil {
@@ -77,6 +88,9 @@ func (j *JSONCodec) Encode(w http.ResponseWriter, r *http.Request, data interfac
 	}
 }
 
+// Decode implements the HTTPDecoder interface with JSON decoding.
+//
+// It simply decodes the request body using json.NewDecoder() and closes it.
 func (j *JSONCodec) Decode(w http.ResponseWriter, r *http.Request, data interface{}) error {
 	defer r.Body.Close()
 	if err := json.NewDecoder(r.Body).Decode(data); err != nil {

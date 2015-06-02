@@ -15,12 +15,13 @@ import (
 // available methods.
 //
 // If the request's method has no handler for it, the MethodHandler responds with
-// a status of 405, Method not allowed and sets the Allow header to a comma-separated list
+// a status of 405 Method not allowed and sets the Allow header to a comma-separated list
 // of available methods.
 type MethodHandler struct {
 	Get, Head, Post, Put, Patch, Delete, Options http.Handler
 }
 
+// ServeHTTP calls the appropriate http.Handler for r.Method, or responds with http.StatusMethodNotAllowed.
 func (h MethodHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
