@@ -282,6 +282,7 @@ package %s
 
 // Spell represents the data structure sent/received on the following routes:
 //
+//  * Response body of GET /spells (as []Spell)
 //  * Request body of POST /spells
 //  * Response body of POST /spells
 //  * Response body of GET /spells/{spell-name}
@@ -447,6 +448,7 @@ type CreateCharacterIn struct {
 
 // ListCharacterOutOne represents the data structure sent/received on the following routes:
 //
+//  * Response body of GET /characters (as []ListCharacterOutOne)
 type ListCharacterOutOne struct {
     Level int   `+"`"+`json:"level"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`
@@ -454,6 +456,7 @@ type ListCharacterOutOne struct {
 
 // Spell represents the data structure sent/received on the following routes:
 //
+//  * Response body of GET /spells (as []Spell)
 //  * Request body of POST /spells
 //  * Response body of POST /spells
 //  * Response body of GET /spells/{spell-name}
@@ -741,6 +744,7 @@ type CreateCharacterIn struct {
 
 // ListCharacterOutOne represents the data structure sent/received on the following routes:
 //
+//  * Response body of GET /characters (as []ListCharacterOutOne)
 type ListCharacterOutOne struct {
     Level int   `+"`"+`json:"level"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`
@@ -748,6 +752,7 @@ type ListCharacterOutOne struct {
 
 // Spell represents the data structure sent/received on the following routes:
 //
+//  * Response body of GET /spells (as []Spell)
 //  * Request body of POST /spells
 //  * Response body of POST /spells
 //  * Response body of GET /spells/{spell-name}

@@ -8,11 +8,11 @@ package {{ .PkgName }}
 
 {{ $existingTypes := .ExistingTypes }}{{ $routes := .Routes }}{{ range .Routes.JSONNamedTypes }}{{/*
 Do not generate the type definition if it's already present in the package
-*/}}{{ if not (hasItem $existingTypes .TypeName) }}{{ $def := printTypeDef . }}{{ if $def }}// {{ .TypeName }} represents the data structure sent/received on the following routes:
+*/}}{{ if not (hasItem $existingTypes .TypeName) }}{{ $def := printTypeDef . }}{{ $typeName := .TypeName }}{{ if $def }}// {{ $typeName }} represents the data structure sent/received on the following routes:
 //{{ $routesForType := (routesForType $routes .) }}{{ range $routesForType }}{{/*
 Write routes on which this type is involved.
 */}}
-{{ if .Input }}//  * Request body of {{ .Route.Method }} {{ .Route.Path }}{{end}}{{ if .Output }}//  * Response body of {{ .Route.Method }} {{ .Route.Path }}{{end}}{{end}}
+{{ if .InputTypeName }}//  * Request body of {{ .Route.Method }} {{ .Route.Path }}{{ if not (eq .InputTypeName $typeName)}} (as {{ .InputTypeName }}){{end}}{{end}}{{ if .OutputTypeName }}//  * Response body of {{ .Route.Method }} {{ .Route.Path }}{{ if not (eq .OutputTypeName $typeName)}} (as {{ .OutputTypeName }}){{end}}{{end}}{{end}}
 {{ $def }}{{ end }}{{ end }}
 
 {{ end }}

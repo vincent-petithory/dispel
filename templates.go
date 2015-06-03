@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"reflect"
 	"sort"
 	"strings"
 	"text/template"
@@ -200,34 +199,60 @@ func NewTemplateFuncMap(sp *SchemaParser) template.FuncMap {
 			}
 			return sp.JSONToGoType(j, false)
 		},
-		"routesForType": func(routes Routes, j JSONType) []RouteAndIO {
-			var froutes []RouteAndIO
+		"routesForType": func(routes Routes, j JSONType) []RouteAndIOTypeNames {
+			var froutes []RouteAndIOTypeNames
+			def := sp.JSONToGoType(j, false)
 			for _, route := range routes {
 				if route.InType != nil {
-					if reflect.DeepEqual(route.InType, j) {
-						froutes = append(froutes, RouteAndIO{
-							Route: route,
-							Input: true,
+					inDef := sp.JSONToGoType(route.InType, false)
+					if inDef == def || inDef == "[]"+def {
+						froutes = append(froutes, RouteAndIOTypeNames{
+							Route:         route,
+							InputTypeName: inDef,
 						})
 					}
 				}
 				if route.OutType != nil {
-					if reflect.DeepEqual(route.OutType, j) {
-						froutes = append(froutes, RouteAndIO{
-							Route:  route,
-							Output: true,
+					outDef := sp.JSONToGoType(route.OutType, false)
+					if outDef == def || outDef == "[]"+def {
+						froutes = append(froutes, RouteAndIOTypeNames{
+							Route:          route,
+							OutputTypeName: outDef,
 						})
 					}
 				}
 			}
+			sort.Sort(RoutesAndIOTypeNames(froutes))
 			return froutes
 		},
 	}
 }
 
-// RouteAndIO represents a Route with flags for its input and output.
-type RouteAndIO struct {
-	Route  Route
-	Input  bool
-	Output bool
+// RouteAndIOTypeNames represents a Route with the names of the types on its input and output.
+type RouteAndIOTypeNames struct {
+	Route          Route
+	InputTypeName  string
+	OutputTypeName string
 }
+
+type RoutesAndIOTypeNames []RouteAndIOTypeNames
+
+func (routes RoutesAndIOTypeNames) Len() int      { return len(routes) }
+func (routes RoutesAndIOTypeNames) Swap(i, j int) { routes[i], routes[j] = routes[j], routes[i] }
+func (routes RoutesAndIOTypeNames) Less(i, j int) bool {
+	if routes[i].Route.Path == routes[j].Route.Path {
+		iIdx, jIdx := -1, -1
+		for k, m := range methodsOrder {
+			if routes[i].Route.Method == m {
+				iIdx = k
+			}
+			if routes[j].Route.Method == m {
+				jIdx = k
+			}
+		}
+		return iIdx < jIdx
+	}
+	return routes[i].Route.Path < routes[j].Route.Path
+}
+
+// DO SORTING
