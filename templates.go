@@ -254,5 +254,3 @@ func (routes RoutesAndIOTypeNames) Less(i, j int) bool {
 	}
 	return routes[i].Route.Path < routes[j].Route.Path
 }
-
-// DO SORTING
