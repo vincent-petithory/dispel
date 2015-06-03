@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"reflect"
 	"sort"
 	"strings"
 	"text/template"
@@ -199,5 +200,34 @@ func NewTemplateFuncMap(sp *SchemaParser) template.FuncMap {
 			}
 			return sp.JSONToGoType(j, false)
 		},
+		"routesForType": func(routes Routes, j JSONType) []RouteAndIO {
+			var froutes []RouteAndIO
+			for _, route := range routes {
+				if route.InType != nil {
+					if reflect.DeepEqual(route.InType, j) {
+						froutes = append(froutes, RouteAndIO{
+							Route: route,
+							Input: true,
+						})
+					}
+				}
+				if route.OutType != nil {
+					if reflect.DeepEqual(route.OutType, j) {
+						froutes = append(froutes, RouteAndIO{
+							Route:  route,
+							Output: true,
+						})
+					}
+				}
+			}
+			return froutes
+		},
 	}
+}
+
+// RouteAndIO represents a Route with flags for its input and output.
+type RouteAndIO struct {
+	Route  Route
+	Input  bool
+	Output bool
 }

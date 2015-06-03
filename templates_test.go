@@ -60,21 +60,27 @@ func registerRoutes(rr RouteRegisterer) {
     rr.RegisterRoute("/spells/{spell-name}", routeSpellsOne)
 }
 
+// Constants defining the name of all the routes of the API.
 const (
     routeSpells = "spells"
     routeSpellsOne = "spells.one"
 )
 
+// Types defining the parameters of all the routes of the API.
 type (
+    // RouteSpells represents the parameters of the path /spells.
     RouteSpells struct{}
+    // RouteSpellsOne represents the parameters of the path /spells/{spell-name}.
     RouteSpellsOne struct{
         SpellName string
     }
 )
 
+// Location implements building an absolute URL for a RouteSpells using a RouteReverser.
 func (r RouteSpells) Location(rr RouteReverser) *url.URL {
     return rr.ReverseRoute(routeSpells)
 }
+// Location implements building an absolute URL for a RouteSpellsOne using a RouteReverser.
 func (r RouteSpellsOne) Location(rr RouteReverser) *url.URL {
     return rr.ReverseRoute(routeSpellsOne, "spell-name", r.SpellName)
 }
@@ -274,6 +280,11 @@ func TestTemplateTypesOneResource(t *testing.T) {
 
 package %s
 
+// Spell represents the data structure sent/received on the following routes:
+//
+//  * Request body of POST /spells
+//  * Response body of POST /spells
+//  * Response body of GET /spells/{spell-name}
 type Spell struct {
     All bool     `+"`"+`json:"all"`+"`"+`
     Element string `+"`"+`json:"element"`+"`"+`
@@ -374,6 +385,9 @@ package %s
 
 import "time"
 
+// Spell represents the data structure sent/received on the following routes:
+//
+//  * Response body of GET /spells/{spell-name}
 type Spell struct {
     All bool     `+"`"+`json:"all"`+"`"+`
     Element string `+"`"+`json:"element"`+"`"+`
@@ -414,21 +428,35 @@ func TestTemplateTypesCompositeResources(t *testing.T) {
 
 package %s
 
+// Character represents the data structure sent/received on the following routes:
+//
+//  * Response body of POST /characters
+//  * Response body of GET /characters/{character-name}
 type Character struct {
     Level int   `+"`"+`json:"level"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`
     Spells []Spell   `+"`"+`json:"spells"`+"`"+`
 }
 
+// CreateCharacterIn represents the data structure sent/received on the following routes:
+//
+//  * Request body of POST /characters
 type CreateCharacterIn struct {
     Name string    `+"`"+`json:"name"`+"`"+`
 }
 
+// ListCharacterOutOne represents the data structure sent/received on the following routes:
+//
 type ListCharacterOutOne struct {
     Level int   `+"`"+`json:"level"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`
 }
 
+// Spell represents the data structure sent/received on the following routes:
+//
+//  * Request body of POST /spells
+//  * Response body of POST /spells
+//  * Response body of GET /spells/{spell-name}
 type Spell struct {
     Element string `+"`"+`json:"element"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`
@@ -704,15 +732,25 @@ func TestTemplateTypesCompositeResourcesAlreadyDefined(t *testing.T) {
 
 package %s
 
+// CreateCharacterIn represents the data structure sent/received on the following routes:
+//
+//  * Request body of POST /characters
 type CreateCharacterIn struct {
     Name string    `+"`"+`json:"name"`+"`"+`
 }
 
+// ListCharacterOutOne represents the data structure sent/received on the following routes:
+//
 type ListCharacterOutOne struct {
     Level int   `+"`"+`json:"level"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`
 }
 
+// Spell represents the data structure sent/received on the following routes:
+//
+//  * Request body of POST /spells
+//  * Response body of POST /spells
+//  * Response body of GET /spells/{spell-name}
 type Spell struct {
     Element string `+"`"+`json:"element"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`

@@ -25,21 +25,26 @@ type RouteLocation interface {
 
 // registerRoutes uses rr to register the routes by path and name.
 func registerRoutes(rr RouteRegisterer) {
-{{ range .Routes.ByResource }}    rr.RegisterRoute("{{ .Path }}", route{{ symbolName .Name }})
+{{ range .Routes.ByResource }}rr.RegisterRoute("{{ .Path }}", route{{ symbolName .Name }})
 {{end}}}
 
+// Constants defining the name of all the routes of the API.
 const (
-{{ range .Routes.ByResource }}    route{{ symbolName .Name }} = "{{ .Name }}"
+{{ range .Routes.ByResource }}route{{ symbolName .Name }} = "{{ .Name }}"
 {{end}}
 )
 
+// Types defining the parameters of all the routes of the API.
 type (
-{{ range .Routes.ByResource }}    Route{{ symbolName .Name }} struct { {{ range .RouteParams }}
+{{ range .Routes.ByResource }}// Route{{ symbolName .Name }} represents the parameters of the path {{ .Path }}.
+Route{{ symbolName .Name }} struct { {{ range .RouteParams }}
     {{ symbolName .Varname }} string {{ end }}}
 {{end}}
 )
 
-{{ range .Routes.ByResource }}func (r Route{{ symbolName .Name }}) Location(rr RouteReverser) *url.URL {
+{{ range .Routes.ByResource }}
+// Location implements building an absolute URL for a Route{{ symbolName .Name }} using a RouteReverser.
+func (r Route{{ symbolName .Name }}) Location(rr RouteReverser) *url.URL {
     return rr.ReverseRoute(route{{ symbolName .Name }}, {{ range .RouteParams }}"{{ .Name }}", r.{{ symbolName .Varname }},{{end}})
 }
 {{end}}
