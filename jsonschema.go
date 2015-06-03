@@ -78,6 +78,7 @@ type Link struct {
 	MediaType    string  `json:"mediaType,omitempty"`
 }
 
+// ApplyDefaults applies default values to the Link's fields.
 func (l *Link) ApplyDefaults() {
 	if l.EncType == "" {
 		l.EncType = "application/json"
@@ -87,10 +88,12 @@ func (l *Link) ApplyDefaults() {
 	}
 }
 
+// ReceivesJSON returns true if the EncType of the Link is recognized as json.
 func (l Link) ReceivesJSON() bool {
 	return strings.HasPrefix(l.EncType, "application/json")
 }
 
+// SendsJSON returns true if the MediaType of the Link is recognized as json.
 func (l Link) SendsJSON() bool {
 	return strings.HasPrefix(l.MediaType, "application/json")
 }
