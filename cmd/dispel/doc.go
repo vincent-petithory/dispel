@@ -10,7 +10,7 @@
 //
 // The -v flag makes dispel more verbose about what the entities it discovers while parsing the json schema.
 //
-// The -t flag specifies which templates to execute, with a comma-separated list of template names.
+// The -t flag specifies which generator to execute, with a comma-separated list of generator names.
 // The names must be in the following list:
 //
 //     handlerfuncs
@@ -19,7 +19,7 @@
 //     types
 //
 //
-// If empty (the default), none is executed. If set to the special value all, all known templates are executed.
+// If empty (the default), none is executed. If set to the special value all, all known generators are executed.
 // dispel will write a file in the package dir (see -pp flag) for each name provided with a filename using the pattern {prefix}{name}.go, where prefix is defined by the -p flag.
 //
 // The -d flag specifies which default implementations provided by dispel to execute,
@@ -36,7 +36,7 @@
 // dispel will write a file in the package dir (see -pp flag) for each default implementation
 // with a filename using the pattern {impl-name}.go
 //
-// The -p flag specifies which prefix to use for each generated template file. By default, it is set to 'dispel_'.
+// The -p flag specifies which prefix to use for each generated file. By default, it is set to 'dispel_'.
 // This doesn't apply to default implementations, which have fixed names.
 //
 // The -hrt flag specifies the Go type in the target package which
@@ -54,26 +54,26 @@
 // It is mandatory to set a value if not invoked with go:generate.
 // If set when dispel is invoked with go:generate, it overrides the value of $GOPACKAGE.
 //
-// The -f flag specifies the path to the file for an alternate format for the template to use, using the Go template syntax.
+// The -f flag specifies the path to a Go template file which accepts the Context type detailed below.
 // If the value is -, then the template is read from STDIN.
 // If set, then -t and -d flags are ignored: only this template is executed. The result is printed to what the -o flag is set to, which by default is STDOUT.
 //
 // The -o flag is only useful when -f is specified. It specifies a path where to write the output from -f.
 // By default, its value is -, which means it writes to STDOUT.
 //
-// The context passed to the template is TemplateContext.
+// The context passed to the template is the type Context.
 //
-// Template Context
+// Generator Context
 //
-// The following struct is passed to the templates:
-//
-//     type TemplateContext struct {
-//         Prgm                string   // name of the program generating the source
-//         PkgName             string   // package name for which source code is generated
-//         Routes              Routes   // routes parsed by the SchemaParser
-//         HandlerReceiverType string   // type which acts as the receiver of the handler funcs.
-//         ExistingHandlers    []string // list of existing handler funcs in the target package, with HandlerReceiverType as the receiver
-//         ExistingTypes       []string // list of existing types in the target package.
+//     // Context represents the context passed to a Generator.
+//     type Context struct {
+//     	Schema              *SchemaParser // the SchemaParser which parsed the json schema
+//     	Prgm                string        // name of the program generating the source
+//     	PkgName             string        // package name for which source code is generated
+//     	Routes              Routes        // routes parsed by the SchemaParser
+//     	HandlerReceiverType string        // type which acts as the receiver of the handler funcs.
+//     	ExistingHandlers    []string      // list of existing handler funcs in the target package, with HandlerReceiverType as the receiver
+//     	ExistingTypes       []string      // list of existing types in the target package.
 //     }
 //
 // The template has those functions available:
@@ -86,10 +86,11 @@
 //  * allHandlerFuncsImplemented: returns true if all handler funcs are implemented in the target package
 //  * varname                   : creates a short variable name from a type. e.g MyLongType would return mlt
 //  * typeImports               : returns a slice of imports required by the generated types
-//  * typeNeedsAddr             : returns true if it is needed to get the addr of a type when used as an argument of a func
 //  * printTypeDef              : prints a valid Go type from a JSONType
+//  * typeNeedsAddr             : returns true if it is needed to get the addr of a type when used as an argument of a func
 //  * printTypeName             : prints the name of the Go type for a JSONType
 //  * printSmartDerefType       : is like printTypeName, but if the argument is a JSONObject, it return *TheType instead of TheType.
+//  * routesForType             : returns a list of routes in which the specified type is involved.
 //
-// For more information, see the documentation of the github.com/vincent-petithory/dispel package's TemplateContext type.
+// For more information, see the documentation of the github.com/vincent-petithory/dispel package's Context type.
 package main

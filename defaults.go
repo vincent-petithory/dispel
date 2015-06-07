@@ -107,16 +107,6 @@ func (d *DefaultImplBundle) Names() []string {
 	for _, tmpl := range d.t.Templates() {
 		a = append(a, tmpl.Name())
 	}
-	return a
-}
-
-// DefaultImplNames returns the same list than DefaultImpl.Names(), but doesn't require
-// to create a DefaultImpl instance.
-func DefaultImplNames() []string {
-	var a []string
-	for name := range defaultImplsMap {
-		a = append(a, name)
-	}
 	sort.Strings(a)
 	return a
 }

@@ -98,12 +98,20 @@ func executeHelpTemplate(w io.Writer) error {
 	if err != nil {
 		return err
 	}
+	bundle, err := dispel.NewBundle(nil)
+	if err != nil {
+		return err
+	}
+	defaultImpl, err := dispel.NewDefaultImplBundle()
+	if err != nil {
+		return err
+	}
 	return t.Execute(w, struct {
-		TemplateNames    []string
+		GeneratorNames   []string
 		DefaultImplNames []string
 	}{
-		TemplateNames:    dispel.TemplateNames(),
-		DefaultImplNames: dispel.DefaultImplNames(),
+		GeneratorNames:   bundle.Names(),
+		DefaultImplNames: defaultImpl.Names(),
 	})
 }
 

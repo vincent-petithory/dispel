@@ -12,7 +12,7 @@ import (
 )
 
 func TestTemplateCompiles(t *testing.T) {
-	_, err := NewTemplateBundle(&SchemaParser{})
+	_, err := NewBundle(&SchemaParser{})
 	ok(t, err)
 }
 
@@ -22,7 +22,7 @@ func TestTemplateRoutes(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -88,11 +88,11 @@ func (r RouteSpellsOne) Location(rr RouteReverser) *url.URL {
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, routesTmpl)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, TemplateRoutes, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	out, err := format.Source(buf.Bytes())
 	ok(t, err)
 	equals(t, string(expectedOut), string(out))
@@ -104,7 +104,7 @@ func TestTemplateHandlers(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -201,11 +201,11 @@ func registerHandlers(hr HandlerRegisterer, rpg RouteParamGetter, a *App, hd HTT
 }`, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, handlersTmpl)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, TemplateHandlers, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -220,7 +220,7 @@ func TestTemplateHandlerFuncs(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -250,11 +250,11 @@ func (a *App) getSpellsOne(w http.ResponseWriter, r *http.Request, spellName str
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, handlerfuncsTmpl)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, TemplateHandlerfuncs, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -269,7 +269,7 @@ func TestTemplateTypesOneResource(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -295,11 +295,11 @@ type Spell struct {
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, typesTmpl)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, TemplateTypes, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -373,7 +373,7 @@ func TestTemplateTypesWithImports(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -399,11 +399,11 @@ type Spell struct {
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, typesTmpl)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, TemplateTypes, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -418,7 +418,7 @@ func TestTemplateTypesCompositeResources(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -469,11 +469,11 @@ type Spell struct {
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, typesTmpl)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, TemplateTypes, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -488,7 +488,7 @@ func TestAlternateTemplate(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -586,11 +586,11 @@ Response:
 Spell
 
 `
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, templateText)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteCustomTemplate(&buf, templateText, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	equals(t, expectedOut, buf.String())
 }
 
@@ -681,7 +681,7 @@ func TestTemplateHandlerFuncsAlreadyDefined(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -704,11 +704,11 @@ func (a *App) getSpellsOne(w http.ResponseWriter, r *http.Request, spellName str
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, handlerfuncsTmpl)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, TemplateHandlerfuncs, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -723,7 +723,7 @@ func TestTemplateTypesCompositeResourcesAlreadyDefined(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -765,11 +765,11 @@ type Spell struct {
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, typesTmpl)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, TemplateTypes, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -784,7 +784,7 @@ func TestTemplateHandlersWithNonJSONEndpoints(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -877,11 +877,11 @@ func registerHandlers(hr HandlerRegisterer, rpg RouteParamGetter, a *App, hd HTT
 }`, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, handlersTmpl)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, TemplateHandlers, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
@@ -896,7 +896,7 @@ func TestTemplateHandlerFuncsWithNonJSONEndpoints(t *testing.T) {
 	routes, err := sp.ParseRoutes()
 	ok(t, err)
 
-	ctx := &TemplateContext{
+	ctx := &Context{
 		Prgm:                "dispel",
 		PkgName:             "handler",
 		Routes:              routes,
@@ -926,11 +926,11 @@ func (a *App) getFilesOne(w http.ResponseWriter, r *http.Request, fileId string)
 `, ctx.Prgm, ctx.PkgName)))
 	ok(t, err)
 
-	tmpl, err := NewTemplateBundle(sp)
+	tmpl, err := NewTemplate(sp, handlerfuncsTmpl)
 	ok(t, err)
 
 	var buf bytes.Buffer
-	ok(t, tmpl.ExecuteTemplate(&buf, TemplateHandlerfuncs, ctx))
+	ok(t, tmpl.Generate(&buf, ctx))
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())

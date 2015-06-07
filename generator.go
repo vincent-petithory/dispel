@@ -16,97 +16,121 @@ import (
 //go:generate asset --var=handlerfuncsTmpl handlerfuncs.go.tmpl
 //go:generate asset --var=typesTmpl types.go.tmpl
 
-var templatesMap = map[string]string{
-	TemplateRoutes:       routesTmpl,
-	TemplateHandlers:     handlersTmpl,
-	TemplateHandlerfuncs: handlerfuncsTmpl,
-	TemplateTypes:        typesTmpl,
+type NamedGenerator struct {
+	Name string
+	Generator
 }
 
-// The templates available in a TemplateBundle.
-const (
-	TemplateRoutes       = "routes"
-	TemplateHandlers     = "handlers"
-	TemplateHandlerfuncs = "handlerfuncs"
-	TemplateTypes        = "types"
-)
+type Bundle struct {
+	Routes       NamedGenerator
+	Handlers     NamedGenerator
+	Handlerfuncs NamedGenerator
+	Types        NamedGenerator
+}
 
-// TemplateNames returns the same list than TemplateBundle.Names(), but doesn't require
-// to create a Template instance.
-func TemplateNames() []string {
-	var a []string
-	for name := range templatesMap {
-		a = append(a, name)
+func NewBundle(sp *SchemaParser) (*Bundle, error) {
+	routes, err := NewTemplate(sp, routesTmpl)
+	if err != nil {
+		return nil, err
 	}
-	sort.Strings(a)
-	return a
+	handlers, err := NewTemplate(sp, handlersTmpl)
+	if err != nil {
+		return nil, err
+	}
+	handlerfuncs, err := NewTemplate(sp, handlerfuncsTmpl)
+	if err != nil {
+		return nil, err
+	}
+	types, err := NewTemplate(sp, typesTmpl)
+	if err != nil {
+		return nil, err
+	}
+	return &Bundle{
+		Routes:       NamedGenerator{Generator: routes, Name: "routes"},
+		Handlers:     NamedGenerator{Generator: handlers, Name: "handlers"},
+		Handlerfuncs: NamedGenerator{Generator: handlerfuncs, Name: "handlerfuncs"},
+		Types:        NamedGenerator{Generator: types, Name: "types"},
+	}, nil
+}
+
+func (b *Bundle) Names() []string {
+	names := []string{
+		b.Routes.Name,
+		b.Handlers.Name,
+		b.Handlerfuncs.Name,
+		b.Types.Name,
+	}
+	sort.Strings(names)
+	return names
+}
+
+func (b *Bundle) ByName(name string) Generator {
+	switch name {
+	case b.Routes.Name:
+		return b.Routes
+	case b.Handlers.Name:
+		return b.Handlers
+	case b.Handlerfuncs.Name:
+		return b.Handlerfuncs
+	case b.Types.Name:
+		return b.Types
+	default:
+		return nil
+	}
+}
+
+type Generator interface {
+	Generate(wr io.Writer, ctx *Context) error
 }
 
 func tmpl(a asset) string {
 	return a.Content
 }
 
-// TemplateBundle represents a bundle of templates for generating the various dispel API source files.
-type TemplateBundle struct {
-	t  *template.Template
-	sp *SchemaParser
-}
-
-// ExecuteTemplate executes the template named by name, using the ctx TemplateContext.
-func (t *TemplateBundle) ExecuteTemplate(wr io.Writer, name string, ctx *TemplateContext) error {
-	ctx.sp = t.sp
-	return t.t.ExecuteTemplate(wr, name, ctx)
-}
-
-// ExecuteCustomTemplate parses then executes the template text, using the ctx TemplateContext.
-func (t *TemplateBundle) ExecuteCustomTemplate(wr io.Writer, text string, ctx *TemplateContext) error {
-	ctx.sp = t.sp
-	tt, err := t.t.New("custom").Parse(text)
-	if err != nil {
-		return err
-	}
-	return tt.Execute(wr, ctx)
-}
-
-// Names returns the list of templates available in the Template bundle.
-func (t *TemplateBundle) Names() []string {
-	var a []string
-	for _, tmpl := range t.t.Templates() {
-		a = append(a, tmpl.Name())
-	}
-	return a
-}
-
-// TemplateContext represents the context passed to a Template.
-type TemplateContext struct {
-	Prgm                string   // name of the program generating the source
-	PkgName             string   // package name for which source code is generated
-	Routes              Routes   // routes parsed by the SchemaParser
-	HandlerReceiverType string   // type which acts as the receiver of the handler funcs.
-	ExistingHandlers    []string // list of existing handler funcs in the target package, with HandlerReceiverType as the receiver
-	ExistingTypes       []string // list of existing types in the target package.
-
-	sp *SchemaParser
+// Context represents the context passed to a Generator.
+type Context struct {
+	Schema              *SchemaParser // the SchemaParser which parsed the json schema
+	Prgm                string        // name of the program generating the source
+	PkgName             string        // package name for which source code is generated
+	Routes              Routes        // routes parsed by the SchemaParser
+	HandlerReceiverType string        // type which acts as the receiver of the handler funcs.
+	ExistingHandlers    []string      // list of existing handler funcs in the target package, with HandlerReceiverType as the receiver
+	ExistingTypes       []string      // list of existing types in the target package.
 }
 
 func handlerFuncName(routeMethod string, routeName string) string {
 	return strings.ToLower(routeMethod) + symbolName(routeName)
 }
 
-// NewTemplateBundle returns a new Template based on the SchemaParser.
-func NewTemplateBundle(sp *SchemaParser) (*TemplateBundle, error) {
-	t := template.New("").Funcs(NewTemplateFuncMap(sp))
-	for name, tmpl := range templatesMap {
-		var err error
-		t, err = t.New(name).Parse(tmpl)
-		if err != nil {
-			return nil, fmt.Errorf("template %s: %v", name, err)
-		}
+// NewTemplate returns a new Template based on the SchemaParser using text.
+func NewTemplate(sp *SchemaParser, text string) (*Template, error) {
+	t, err := template.New("").Funcs(NewTemplateFuncMap(sp)).Parse(text)
+	if err != nil {
+		return nil, err
 	}
-	return &TemplateBundle{t: t, sp: sp}, nil
+	return &Template{T: t, Schema: sp}, nil
 }
 
-// NewTemplateFuncMap returns the template.FuncMap used in a TemplateBundle.
+type Template struct {
+	T      *template.Template
+	Schema *SchemaParser
+
+	name string
+}
+
+// Name returns the name of the template.
+func (t *Template) Name() string {
+	return t.name
+}
+
+// Generate implements the Generator interface.
+// It executes the template with the ctx, and writes the output to w. The ctx is forced to use the Template's SchemaParser.
+func (t *Template) Generate(w io.Writer, ctx *Context) error {
+	ctx.Schema = t.Schema
+	return t.T.Execute(w, ctx)
+}
+
+// NewTemplateFuncMap returns a template.FuncMap useful for building dispel text templates.
 func NewTemplateFuncMap(sp *SchemaParser) template.FuncMap {
 	return template.FuncMap{
 		"tolower":    strings.ToLower,

@@ -203,12 +203,12 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithAPI(t *testing.T) {
 			routes, err := sp.ParseRoutes()
 			ok(tb, err)
 
-			tmpl, err := dispel.NewTemplateBundle(sp)
+			bundle, err := dispel.NewBundle(sp)
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			ctx := &dispel.TemplateContext{
+			ctx := &dispel.Context{
 				Prgm:                "dispel",
 				PkgName:             "main",
 				Routes:              routes,
@@ -217,8 +217,8 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithAPI(t *testing.T) {
 
 			// Exec templates
 			var buf bytes.Buffer
-			for _, name := range tmpl.Names() {
-				ok(tb, tmpl.ExecuteTemplate(&buf, name, ctx))
+			for _, name := range bundle.Names() {
+				ok(tb, bundle.ByName(name).Generate(&buf, ctx))
 				// Format source with gofmt
 				src, err := format.Source(buf.Bytes())
 				if err != nil {

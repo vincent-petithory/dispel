@@ -139,8 +139,8 @@ func main() {
 		schemaParser.Log = log.New(os.Stdout, "dispel> ", 0)
 	}
 
-	// Create dispel template using the parser
-	t, err := dispel.NewTemplateBundle(schemaParser)
+	// Create a dispel bundle  using the parser
+	bundle, err := dispel.NewBundle(schemaParser)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func main() {
 	}
 
 	var genFilenames []string
-	for _, tmplName := range t.Names() {
+	for _, tmplName := range bundle.Names() {
 		genFilenames = append(genFilenames, filepath.Base(genPathFn(tmplName)))
 	}
 
@@ -195,7 +195,7 @@ func main() {
 	}
 
 	// Prepare context for template
-	ctx := &dispel.TemplateContext{
+	ctx := &dispel.Context{
 		Prgm:                fmt.Sprintf("%s v%d", prgmName, dispel.Version),
 		PkgName:             pkgname,
 		Routes:              routes,
@@ -231,7 +231,11 @@ func main() {
 			defer f.Close()
 			out = f
 		}
-		if err := t.ExecuteCustomTemplate(out, altFormat, ctx); err != nil {
+		t, err := dispel.NewTemplate(schemaParser, altFormat)
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := t.Generate(out, ctx); err != nil {
 			log.Fatal(err)
 		}
 		return
@@ -239,14 +243,15 @@ func main() {
 
 	// Exec templates
 	if len(templateNames) == 1 && templateNames[0] == "all" {
-		templateNames = t.Names()
+		templateNames = bundle.Names()
 	}
 	var buf bytes.Buffer
 	for _, name := range templateNames {
-		if name == "" {
-			continue
+		g := bundle.ByName(name)
+		if g == nil {
+			log.Fatalf("%s: no such generator", name)
 		}
-		if err := t.ExecuteTemplate(&buf, name, ctx); err != nil {
+		if err := g.Generate(&buf, ctx); err != nil {
 			log.Fatal(err)
 		}
 		// Format source with gofmt
