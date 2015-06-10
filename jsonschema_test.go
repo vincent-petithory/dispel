@@ -2,11 +2,86 @@ package dispel
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
 	"sort"
 	"testing"
 )
+
+func routesEquals(expectedRoutes Routes, actualRoutes Routes) error {
+	le := len(expectedRoutes)
+	la := len(actualRoutes)
+	if le != la {
+		return fmt.Errorf("expected %d routes, got %d", le, la)
+	}
+	for i := 0; i < le; i++ {
+		if err := routeEquals(expectedRoutes[i], actualRoutes[i]); err != nil {
+			return fmt.Errorf("routes[%d]: %v", i, err)
+		}
+	}
+	return nil
+}
+
+func routeEquals(expectedRoute Route, actualRoute Route) error {
+	if err := linkEquals(expectedRoute.Link, actualRoute.Link); err != nil {
+		return fmt.Errorf("route.Link: %v", err)
+	}
+	// ignore checking the schema and targetSchema
+	expectedRoute.Link = Link{}
+	actualRoute.Link = Link{}
+	err := fmt.Errorf("expected:\n%#v\ngot:\n%#v", expectedRoute, actualRoute)
+	if !reflect.DeepEqual(expectedRoute, actualRoute) {
+		return err
+	}
+	return nil
+}
+
+func resourceRoutesEquals(expectedResourceRoutes ResourceRoutes, actualResourceRoutes ResourceRoutes) error {
+	le := len(expectedResourceRoutes)
+	la := len(actualResourceRoutes)
+	if le != la {
+		return fmt.Errorf("expected %d resource routes, got %d", le, la)
+	}
+	for i := 0; i < le; i++ {
+		if err := resourceRouteEquals(expectedResourceRoutes[i], actualResourceRoutes[i]); err != nil {
+			return fmt.Errorf("at %d: %v", i, err)
+		}
+	}
+	return nil
+}
+
+func resourceRouteEquals(expectedResourceRoute ResourceRoute, actualResourceRoute ResourceRoute) error {
+	err := fmt.Errorf("expected:\n%#v\ngot:\n%#v", expectedResourceRoute, actualResourceRoute)
+	for m := range actualResourceRoute.MethodRouteIOMap {
+		if err := linkEquals(expectedResourceRoute.MethodRouteIOMap[m].Link, actualResourceRoute.MethodRouteIOMap[m].Link); err != nil {
+			return err
+		}
+
+		erio := expectedResourceRoute.MethodRouteIOMap[m]
+		erio.Link = Link{}
+		expectedResourceRoute.MethodRouteIOMap[m] = erio
+
+		ario := actualResourceRoute.MethodRouteIOMap[m]
+		ario.Link = Link{}
+		actualResourceRoute.MethodRouteIOMap[m] = ario
+	}
+	if !reflect.DeepEqual(expectedResourceRoute, actualResourceRoute) {
+		return err
+	}
+	return nil
+}
+
+func linkEquals(expectedLink Link, actualLink Link) error {
+	err := fmt.Errorf("expected:\n%#v\ngot:\n%#v", expectedLink, actualLink)
+	// ignore checking the schema and targetSchema
+	actualLink.Schema = nil
+	actualLink.TargetSchema = nil
+	if !reflect.DeepEqual(expectedLink, actualLink) {
+		return err
+	}
+	return nil
+}
 
 // getSchema opens a json schema, unmarshals it and returns it.
 // If an error occurs, the test which called getSchema will fail now.
@@ -201,6 +276,14 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 					},
 				},
 			},
+			Link: Link{
+				Title:     "Create a spell",
+				HRef:      "/spells",
+				Rel:       "create",
+				Method:    "POST",
+				EncType:   "application/json",
+				MediaType: "application/json",
+			},
 		},
 		{
 			Path:        "/spells",
@@ -223,6 +306,14 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 					},
 				},
 			},
+			Link: Link{
+				Title:     "List spells",
+				HRef:      "/spells",
+				Rel:       "list",
+				Method:    "GET",
+				EncType:   "application/json",
+				MediaType: "application/json",
+			},
 		},
 		{
 			Path: "/spells/{spell-name}",
@@ -243,6 +334,14 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 					},
 				},
 			},
+			Link: Link{
+				Title:     "Info for a spell",
+				HRef:      "/spells/{(#/definitions/spell/definitions/name)}",
+				Rel:       "one",
+				Method:    "GET",
+				EncType:   "application/json",
+				MediaType: "application/json",
+			},
 		},
 	}
 	sort.Sort(expectedRoutes)
@@ -253,9 +352,8 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if !reflect.DeepEqual(expectedRoutes, routes) {
-		t.Errorf("expected %#v, got %#v", expectedRoutes, routes)
-		return
+	if err := routesEquals(expectedRoutes, routes); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -270,28 +368,16 @@ func TestParseSchemaByResource(t *testing.T) {
 			Name:        "armors",
 			RouteParams: []RouteParam{},
 			MethodRouteIOMap: MethodRouteIOMap{
-				"POST": RouteIO{
-					InType: JSONObject{
-						Name: "CreateArmorIn",
-						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
-							{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
+				"POST": RouteIOAndLink{
+					RouteIO: RouteIO{
+						InType: JSONObject{
+							Name: "CreateArmorIn",
+							Fields: JSONFieldList{ // .Name natural sort
+								{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
+								{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
+							},
 						},
-					},
-					OutType: JSONObject{
-						Name: "Armor",
-						ref:  "#/definitions/armor",
-						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
-							{Name: "id", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
-							{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
-						},
-					},
-				},
-				"GET": RouteIO{
-					OutType: JSONArray{
-						Name: "ListArmorOut",
-						Items: JSONObject{
+						OutType: JSONObject{
 							Name: "Armor",
 							ref:  "#/definitions/armor",
 							Fields: JSONFieldList{ // .Name natural sort
@@ -300,6 +386,39 @@ func TestParseSchemaByResource(t *testing.T) {
 								{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
 							},
 						},
+					},
+					Link: Link{
+						Title:     "Create an armor",
+						HRef:      "/armors",
+						Rel:       "create",
+						Method:    "POST",
+						EncType:   "application/json",
+						MediaType: "application/json",
+					},
+				},
+				"GET": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONArray{
+							Name: "ListArmorOut",
+							Items: JSONObject{
+								Name: "Armor",
+								ref:  "#/definitions/armor",
+								Fields: JSONFieldList{ // .Name natural sort
+									{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
+									{Name: "id", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
+									{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
+								},
+							},
+						},
+					},
+					Link: Link{
+						Title:       "List armors",
+						Description: "",
+						HRef:        "/armors",
+						Rel:         "list",
+						Method:      "GET",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
 			},
@@ -311,26 +430,48 @@ func TestParseSchemaByResource(t *testing.T) {
 				{Name: "armor-id", Varname: "armorId", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
 			},
 			MethodRouteIOMap: MethodRouteIOMap{
-				"GET": RouteIO{
-					OutType: JSONObject{
-						Name: "Armor",
-						ref:  "#/definitions/armor",
-						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
-							{Name: "id", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
-							{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
+				"GET": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONObject{
+							Name: "Armor",
+							ref:  "#/definitions/armor",
+							Fields: JSONFieldList{ // .Name natural sort
+								{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
+								{Name: "id", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
+								{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
+							},
 						},
 					},
+					Link: Link{
+						Title:       "Info for an armor",
+						Description: "",
+						HRef:        "/armors/{(#/definitions/armor/definitions/id)}",
+						Rel:         "one",
+						Method:      "GET",
+						EncType:     "application/json",
+						MediaType:   "application/json",
+					},
 				},
-				"DELETE": RouteIO{
-					OutType: JSONObject{
-						Name: "Armor",
-						ref:  "#/definitions/armor",
-						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
-							{Name: "id", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
-							{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
+				"DELETE": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONObject{
+							Name: "Armor",
+							ref:  "#/definitions/armor",
+							Fields: JSONFieldList{ // .Name natural sort
+								{Name: "can_break", Type: JSONBoolean{ref: "#/definitions/armor/definitions/canbreak"}},
+								{Name: "id", Type: JSONString{ref: "#/definitions/armor/definitions/id"}},
+								{Name: "name", Type: JSONString{ref: "#/definitions/armor/definitions/name"}},
+							},
 						},
+					},
+					Link: Link{
+						Title:       "Deletes an existing armor",
+						Description: "",
+						HRef:        "/armors/{(#/definitions/armor/definitions/id)}",
+						Rel:         "delete",
+						Method:      "DELETE",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
 			},
@@ -340,29 +481,17 @@ func TestParseSchemaByResource(t *testing.T) {
 			Name:        "weapons",
 			RouteParams: []RouteParam{},
 			MethodRouteIOMap: MethodRouteIOMap{
-				"POST": RouteIO{
-					InType: JSONObject{
-						Name: "CreateWeaponIn",
-						ref:  "",
-						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
-							{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
+				"POST": RouteIOAndLink{
+					RouteIO: RouteIO{
+						InType: JSONObject{
+							Name: "CreateWeaponIn",
+							ref:  "",
+							Fields: JSONFieldList{ // .Name natural sort
+								{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
+								{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
+							},
 						},
-					},
-					OutType: JSONObject{
-						Name: "Weapon",
-						ref:  "#/definitions/weapon",
-						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
-							{Name: "id", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
-							{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
-						},
-					},
-				},
-				"GET": RouteIO{
-					OutType: JSONArray{
-						Name: "ListWeaponOut",
-						Items: JSONObject{
+						OutType: JSONObject{
 							Name: "Weapon",
 							ref:  "#/definitions/weapon",
 							Fields: JSONFieldList{ // .Name natural sort
@@ -371,6 +500,40 @@ func TestParseSchemaByResource(t *testing.T) {
 								{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
 							},
 						},
+					},
+					Link: Link{
+						Title:       "Create a weapon",
+						Description: "",
+						HRef:        "/weapons",
+						Rel:         "create",
+						Method:      "POST",
+						EncType:     "application/json",
+						MediaType:   "application/json",
+					},
+				},
+				"GET": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONArray{
+							Name: "ListWeaponOut",
+							Items: JSONObject{
+								Name: "Weapon",
+								ref:  "#/definitions/weapon",
+								Fields: JSONFieldList{ // .Name natural sort
+									{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
+									{Name: "id", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
+									{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
+								},
+							},
+						},
+					},
+					Link: Link{
+						Title:       "List weapons",
+						Description: "",
+						HRef:        "/weapons",
+						Rel:         "list",
+						Method:      "GET",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
 			},
@@ -382,15 +545,26 @@ func TestParseSchemaByResource(t *testing.T) {
 				{Name: "weapon-id", Varname: "weaponId", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
 			},
 			MethodRouteIOMap: MethodRouteIOMap{
-				"GET": RouteIO{
-					OutType: JSONObject{
-						Name: "Weapon",
-						ref:  "#/definitions/weapon",
-						Fields: JSONFieldList{ // .Name natural sort
-							{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
-							{Name: "id", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
-							{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
+				"GET": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONObject{
+							Name: "Weapon",
+							ref:  "#/definitions/weapon",
+							Fields: JSONFieldList{ // .Name natural sort
+								{Name: "damage", Type: JSONInteger{ref: "#/definitions/weapon/definitions/damage"}},
+								{Name: "id", Type: JSONString{ref: "#/definitions/weapon/definitions/id"}},
+								{Name: "name", Type: JSONString{ref: "#/definitions/weapon/definitions/name"}},
+							},
 						},
+					},
+					Link: Link{
+						Title:       "Info for a weapon",
+						Description: "",
+						HRef:        "/weapons/{(#/definitions/weapon/definitions/id)}",
+						Rel:         "one",
+						Method:      "GET",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
 			},
@@ -404,9 +578,8 @@ func TestParseSchemaByResource(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if !reflect.DeepEqual(expectedResourceRoutes, routes.ByResource()) {
-		t.Errorf("expected %#v, got %#v", expectedResourceRoutes, routes.ByResource())
-		return
+	if err := resourceRoutesEquals(expectedResourceRoutes, routes.ByResource()); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -436,6 +609,15 @@ func TestMixedRouteParams(t *testing.T) {
 					},
 				},
 			},
+			Link: Link{
+				Title:       "Info for a spell",
+				Description: "",
+				HRef:        "/spells/{(#/definitions/spell/definitions/name)}",
+				Rel:         "one",
+				Method:      "GET",
+				EncType:     "application/json",
+				MediaType:   "application/json",
+			},
 		},
 		{
 			Path: "/locations/{location-id}",
@@ -453,6 +635,15 @@ func TestMixedRouteParams(t *testing.T) {
 						{Name: "name", Type: JSONString{ref: "#/definitions/location/definitions/name"}},
 					},
 				},
+			},
+			Link: Link{
+				Title:       "Info for a location",
+				Description: "",
+				HRef:        "/locations/{(#/definitions/location/definitions/id)}",
+				Rel:         "one",
+				Method:      "GET",
+				EncType:     "application/json",
+				MediaType:   "application/json",
 			},
 		},
 		{
@@ -473,6 +664,15 @@ func TestMixedRouteParams(t *testing.T) {
 					},
 				},
 			},
+			Link: Link{
+				Title:       "Info for a weapon",
+				Description: "",
+				HRef:        "/weapons/{(#/definitions/weapon/definitions/id)}",
+				Rel:         "one",
+				Method:      "GET",
+				EncType:     "application/json",
+				MediaType:   "application/json",
+			},
 		},
 		{
 			Path: "/materias/{name}",
@@ -490,6 +690,15 @@ func TestMixedRouteParams(t *testing.T) {
 					},
 				},
 			},
+			Link: Link{
+				Title:       "Info for a materia",
+				Description: "",
+				HRef:        "/materias/{name}",
+				Rel:         "one",
+				Method:      "GET",
+				EncType:     "application/json",
+				MediaType:   "application/json",
+			},
 		},
 	}
 	sort.Sort(expectedRoutes)
@@ -500,9 +709,8 @@ func TestMixedRouteParams(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if !reflect.DeepEqual(expectedRoutes, routes) {
-		t.Errorf("expected %#v, got %#v", expectedRoutes, routes)
-		return
+	if err := routesEquals(expectedRoutes, routes); err != nil {
+		t.Error(err)
 	}
 }
 
@@ -594,10 +802,21 @@ func TestParseKrakenSchema(t *testing.T) {
 			Name:        "fileservers",
 			RouteParams: []RouteParam{},
 			MethodRouteIOMap: MethodRouteIOMap{
-				"GET": RouteIO{
-					OutType: JSONArray{
-						Name:  "ListAllFileServerTypeOut",
-						Items: JSONString{ref: "#/definitions/fileservertype"},
+				"GET": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONArray{
+							Name:  "ListAllFileServerTypeOut",
+							Items: JSONString{ref: "#/definitions/fileservertype"},
+						},
+					},
+					Link: Link{
+						Title:       "List existing file server types",
+						Description: "",
+						HRef:        "/fileservers",
+						Rel:         "list-all",
+						Method:      "GET",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
 			},
@@ -607,60 +826,18 @@ func TestParseKrakenSchema(t *testing.T) {
 			Name:        "servers",
 			RouteParams: []RouteParam{},
 			MethodRouteIOMap: MethodRouteIOMap{
-				"POST": RouteIO{
-					InType: JSONObject{
-						Name: "CreateRandomServerIn",
-						Fields: JSONFieldList{
-							JSONField{
-								Name: "bind_address",
-								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
-							},
-						},
-					},
-					OutType: JSONObject{
-						Name: "Server",
-						Fields: JSONFieldList{
-							JSONField{
-								Name: "bind_address",
-								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
-							},
-							JSONField{
-								Name: "mounts",
-								Type: JSONArray{
-									Name: "ServerMounts",
-									ref:  "#/definitions/server/definitions/mounts",
-									Items: JSONObject{
-										Name: "Mount",
-										Fields: JSONFieldList{
-											JSONField{
-												Name: "id",
-												Type: JSONString{ref: "#/definitions/mount/definitions/id"},
-											},
-											JSONField{
-												Name: "source",
-												Type: JSONString{ref: "#/definitions/mount/definitions/source"},
-											},
-											JSONField{
-												Name: "target",
-												Type: JSONString{ref: "#/definitions/mount/definitions/target"}},
-										},
-										ref: "#/definitions/mount",
-									},
+				"POST": RouteIOAndLink{
+					RouteIO: RouteIO{
+						InType: JSONObject{
+							Name: "CreateRandomServerIn",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "bind_address",
+									Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
 								},
 							},
-							JSONField{
-								Name: "port",
-								Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
-							},
 						},
-						ref: "#/definitions/server",
-					},
-				},
-				"DELETE": RouteIO{
-					OutType: JSONArray{
-						Name: "DeleteAllServerOut",
-						ref:  "",
-						Items: JSONObject{
+						OutType: JSONObject{
 							Name: "Server",
 							Fields: JSONFieldList{
 								JSONField{
@@ -685,8 +862,7 @@ func TestParseKrakenSchema(t *testing.T) {
 												},
 												JSONField{
 													Name: "target",
-													Type: JSONString{ref: "#/definitions/mount/definitions/target"},
-												},
+													Type: JSONString{ref: "#/definitions/mount/definitions/target"}},
 											},
 											ref: "#/definitions/mount",
 										},
@@ -697,13 +873,143 @@ func TestParseKrakenSchema(t *testing.T) {
 									Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
 								},
 							},
-							ref: "#/definitions/server"},
+							ref: "#/definitions/server",
+						},
+					},
+					Link: Link{
+						Title:       "Create a new server listening on a random port",
+						Description: "",
+						HRef:        "/servers",
+						Rel:         "create-random",
+						Method:      "POST",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
-				"GET": RouteIO{
-					OutType: JSONArray{
-						Name: "ListAllServerOut",
-						Items: JSONObject{
+				"DELETE": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONArray{
+							Name: "DeleteAllServerOut",
+							ref:  "",
+							Items: JSONObject{
+								Name: "Server",
+								Fields: JSONFieldList{
+									JSONField{
+										Name: "bind_address",
+										Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+									},
+									JSONField{
+										Name: "mounts",
+										Type: JSONArray{
+											Name: "ServerMounts",
+											ref:  "#/definitions/server/definitions/mounts",
+											Items: JSONObject{
+												Name: "Mount",
+												Fields: JSONFieldList{
+													JSONField{
+														Name: "id",
+														Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+													},
+													JSONField{
+														Name: "source",
+														Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+													},
+													JSONField{
+														Name: "target",
+														Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+													},
+												},
+												ref: "#/definitions/mount",
+											},
+										},
+									},
+									JSONField{
+										Name: "port",
+										Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
+									},
+								},
+								ref: "#/definitions/server"},
+						},
+					},
+					Link: Link{
+						Title:       "Delete all existing servers and all their mounts",
+						Description: "",
+						HRef:        "/servers",
+						Rel:         "delete-all",
+						Method:      "DELETE",
+						EncType:     "application/json",
+						MediaType:   "application/json",
+					},
+				},
+				"GET": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONArray{
+							Name: "ListAllServerOut",
+							Items: JSONObject{
+								Name: "Server",
+								Fields: JSONFieldList{
+									JSONField{
+										Name: "bind_address",
+										Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+									},
+									JSONField{
+										Name: "mounts",
+										Type: JSONArray{
+											Name: "ServerMounts",
+											ref:  "#/definitions/server/definitions/mounts",
+											Items: JSONObject{
+												Name: "Mount",
+												Fields: JSONFieldList{
+													JSONField{
+														Name: "id",
+														Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+													},
+													JSONField{
+														Name: "source",
+														Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+													},
+													JSONField{
+														Name: "target",
+														Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+													},
+												},
+												ref: "#/definitions/mount"},
+										},
+									},
+									JSONField{
+										Name: "port",
+										Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
+									},
+								},
+								ref: "#/definitions/server"},
+						},
+					},
+					Link: Link{
+						Title:       "List existing servers",
+						Description: "",
+						HRef:        "/servers",
+						Rel:         "list-all",
+						Method:      "GET",
+						EncType:     "application/json",
+						MediaType:   "application/json",
+					},
+				},
+			},
+		},
+		{
+			Path: "/servers/{server-port}",
+			Name: "servers.one",
+			RouteParams: []RouteParam{
+				RouteParam{
+					Name:    "server-port",
+					Varname: "serverPort",
+					Type:    JSONInteger{ref: "#/definitions/server/definitions/port"},
+				},
+			},
+			MethodRouteIOMap: MethodRouteIOMap{
+				"DELETE": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONObject{
 							Name: "Server",
 							Fields: JSONFieldList{
 								JSONField{
@@ -741,148 +1047,127 @@ func TestParseKrakenSchema(t *testing.T) {
 							},
 							ref: "#/definitions/server"},
 					},
-				},
-			},
-		},
-		{
-			Path: "/servers/{server-port}",
-			Name: "servers.one",
-			RouteParams: []RouteParam{
-				RouteParam{
-					Name:    "server-port",
-					Varname: "serverPort",
-					Type:    JSONInteger{ref: "#/definitions/server/definitions/port"},
-				},
-			},
-			MethodRouteIOMap: MethodRouteIOMap{
-				"DELETE": RouteIO{
-					OutType: JSONObject{
-						Name: "Server",
-						Fields: JSONFieldList{
-							JSONField{
-								Name: "bind_address",
-								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
-							},
-							JSONField{
-								Name: "mounts",
-								Type: JSONArray{
-									Name: "ServerMounts",
-									ref:  "#/definitions/server/definitions/mounts",
-									Items: JSONObject{
-										Name: "Mount",
-										Fields: JSONFieldList{
-											JSONField{
-												Name: "id",
-												Type: JSONString{ref: "#/definitions/mount/definitions/id"},
-											},
-											JSONField{
-												Name: "source",
-												Type: JSONString{ref: "#/definitions/mount/definitions/source"},
-											},
-											JSONField{
-												Name: "target",
-												Type: JSONString{ref: "#/definitions/mount/definitions/target"},
-											},
-										},
-										ref: "#/definitions/mount"},
-								},
-							},
-							JSONField{
-								Name: "port",
-								Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
-							},
-						},
-						ref: "#/definitions/server"},
-				},
-				"PUT": RouteIO{
-					InType: JSONObject{
-						Name: "CreateServerIn",
-						Fields: JSONFieldList{
-							JSONField{
-								Name: "bind_address",
-								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
-							},
-						},
-						ref: "",
-					},
-					OutType: JSONObject{
-						Name: "Server",
-						Fields: JSONFieldList{
-							JSONField{
-								Name: "bind_address",
-								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
-							},
-							JSONField{
-								Name: "mounts",
-								Type: JSONArray{
-									Name: "ServerMounts",
-									ref:  "#/definitions/server/definitions/mounts",
-									Items: JSONObject{
-										Name: "Mount",
-										Fields: JSONFieldList{
-											JSONField{
-												Name: "id",
-												Type: JSONString{ref: "#/definitions/mount/definitions/id"},
-											},
-											JSONField{
-												Name: "source",
-												Type: JSONString{ref: "#/definitions/mount/definitions/source"},
-											},
-											JSONField{
-												Name: "target",
-												Type: JSONString{ref: "#/definitions/mount/definitions/target"},
-											},
-										},
-										ref: "#/definitions/mount"},
-								},
-							},
-							JSONField{
-								Name: "port",
-								Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
-							},
-						},
-						ref: "#/definitions/server",
+					Link: Link{
+						Title:       "Delete an existing server and all its mounts",
+						Description: "",
+						HRef:        "/servers/{(#/definitions/server/definitions/port)}",
+						Rel:         "delete",
+						Method:      "DELETE",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
-				"GET": RouteIO{
-					OutType: JSONObject{
-						Name: "Server",
-						Fields: JSONFieldList{
-							JSONField{
-								Name: "bind_address",
-								Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+				"PUT": RouteIOAndLink{
+					RouteIO: RouteIO{
+						InType: JSONObject{
+							Name: "CreateServerIn",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "bind_address",
+									Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+								},
 							},
-							JSONField{
-								Name: "mounts",
-								Type: JSONArray{
-									Name: "ServerMounts",
-									ref:  "#/definitions/server/definitions/mounts",
-									Items: JSONObject{
-										Name: "Mount",
-										Fields: JSONFieldList{
-											JSONField{
-												Name: "id",
-												Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+							ref: "",
+						},
+						OutType: JSONObject{
+							Name: "Server",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "bind_address",
+									Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+								},
+								JSONField{
+									Name: "mounts",
+									Type: JSONArray{
+										Name: "ServerMounts",
+										ref:  "#/definitions/server/definitions/mounts",
+										Items: JSONObject{
+											Name: "Mount",
+											Fields: JSONFieldList{
+												JSONField{
+													Name: "id",
+													Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+												},
+												JSONField{
+													Name: "source",
+													Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+												},
+												JSONField{
+													Name: "target",
+													Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+												},
 											},
-											JSONField{
-												Name: "source",
-												Type: JSONString{ref: "#/definitions/mount/definitions/source"},
-											},
-											JSONField{
-												Name: "target",
-												Type: JSONString{ref: "#/definitions/mount/definitions/target"},
-											},
-										},
-										ref: "#/definitions/mount",
+											ref: "#/definitions/mount"},
 									},
 								},
+								JSONField{
+									Name: "port",
+									Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
+								},
 							},
-							JSONField{
-								Name: "port",
-								Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
-							},
+							ref: "#/definitions/server",
 						},
-						ref: "#/definitions/server",
+					},
+					Link: Link{
+						Title:       "Create a new server listening on a specific port",
+						Description: "",
+						HRef:        "/servers/{(#/definitions/server/definitions/port)}",
+						Rel:         "create",
+						Method:      "PUT",
+						EncType:     "application/json",
+						MediaType:   "application/json",
+					},
+				},
+				"GET": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONObject{
+							Name: "Server",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "bind_address",
+									Type: JSONString{ref: "#/definitions/server/definitions/bindaddress"},
+								},
+								JSONField{
+									Name: "mounts",
+									Type: JSONArray{
+										Name: "ServerMounts",
+										ref:  "#/definitions/server/definitions/mounts",
+										Items: JSONObject{
+											Name: "Mount",
+											Fields: JSONFieldList{
+												JSONField{
+													Name: "id",
+													Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+												},
+												JSONField{
+													Name: "source",
+													Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+												},
+												JSONField{
+													Name: "target",
+													Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+												},
+											},
+											ref: "#/definitions/mount",
+										},
+									},
+								},
+								JSONField{
+									Name: "port",
+									Type: JSONInteger{ref: "#/definitions/server/definitions/port"},
+								},
+							},
+							ref: "#/definitions/server",
+						},
+					},
+					Link: Link{
+						Title:       "Info for a server",
+						Description: "",
+						HRef:        "/servers/{(#/definitions/server/definitions/port)}",
+						Rel:         "self",
+						Method:      "GET",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
 			},
@@ -898,10 +1183,66 @@ func TestParseKrakenSchema(t *testing.T) {
 				},
 			},
 			MethodRouteIOMap: MethodRouteIOMap{
-				"DELETE": RouteIO{
-					OutType: JSONArray{
-						Name: "DeleteAllMountOut",
-						Items: JSONObject{
+				"DELETE": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONArray{
+							Name: "DeleteAllMountOut",
+							Items: JSONObject{
+								Name: "Mount",
+								Fields: JSONFieldList{
+									JSONField{
+										Name: "id",
+										Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+									},
+									JSONField{
+										Name: "source",
+										Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+									},
+									JSONField{
+										Name: "target",
+										Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+									},
+								},
+								ref: "#/definitions/mount",
+							},
+						},
+					},
+					Link: Link{
+						Title:       "Delete all existing mounts of a server",
+						Description: "",
+						HRef:        "/servers/{(#/definitions/server/definitions/port)}/mounts",
+						Rel:         "delete-all",
+						Method:      "DELETE",
+						EncType:     "application/json",
+						MediaType:   "application/json",
+					},
+				},
+				"POST": RouteIOAndLink{
+					RouteIO: RouteIO{
+						InType: JSONObject{
+							Name: "CreateMountIn",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "fs_params",
+									Type: JSONObject{
+										Name: "FsParams",
+									},
+								},
+								JSONField{
+									Name: "fs_type",
+									Type: JSONString{},
+								},
+								JSONField{
+									Name: "source",
+									Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+								},
+								JSONField{
+									Name: "target",
+									Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+								},
+							},
+						},
+						OutType: JSONObject{
 							Name: "Mount",
 							Fields: JSONFieldList{
 								JSONField{
@@ -920,71 +1261,48 @@ func TestParseKrakenSchema(t *testing.T) {
 							ref: "#/definitions/mount",
 						},
 					},
+					Link: Link{
+						Title:       "Create a new mount on a server",
+						Description: "",
+						HRef:        "/servers/{(#/definitions/server/definitions/port)}/mounts",
+						Rel:         "create",
+						Method:      "POST",
+						EncType:     "application/json",
+						MediaType:   "application/json",
+					},
 				},
-				"POST": RouteIO{
-					InType: JSONObject{
-						Name: "CreateMountIn",
-						Fields: JSONFieldList{
-							JSONField{
-								Name: "fs_params",
-								Type: JSONObject{
-									Name: "FsParams",
+				"GET": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONArray{
+							Name: "ListAllMountOut",
+							Items: JSONObject{
+								Name: "Mount",
+								Fields: JSONFieldList{
+									JSONField{
+										Name: "id",
+										Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+									},
+									JSONField{
+										Name: "source",
+										Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+									},
+									JSONField{
+										Name: "target",
+										Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+									},
 								},
-							},
-							JSONField{
-								Name: "fs_type",
-								Type: JSONString{},
-							},
-							JSONField{
-								Name: "source",
-								Type: JSONString{ref: "#/definitions/mount/definitions/source"},
-							},
-							JSONField{
-								Name: "target",
-								Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+								ref: "#/definitions/mount",
 							},
 						},
 					},
-					OutType: JSONObject{
-						Name: "Mount",
-						Fields: JSONFieldList{
-							JSONField{
-								Name: "id",
-								Type: JSONString{ref: "#/definitions/mount/definitions/id"},
-							},
-							JSONField{
-								Name: "source",
-								Type: JSONString{ref: "#/definitions/mount/definitions/source"},
-							},
-							JSONField{
-								Name: "target",
-								Type: JSONString{ref: "#/definitions/mount/definitions/target"},
-							},
-						},
-						ref: "#/definitions/mount",
-					},
-				},
-				"GET": RouteIO{
-					OutType: JSONArray{
-						Name: "ListAllMountOut",
-						Items: JSONObject{
-							Name: "Mount",
-							Fields: JSONFieldList{
-								JSONField{
-									Name: "id",
-									Type: JSONString{ref: "#/definitions/mount/definitions/id"},
-								},
-								JSONField{
-									Name: "source",
-									Type: JSONString{ref: "#/definitions/mount/definitions/source"},
-								},
-								JSONField{
-									Name: "target",
-									Type: JSONString{ref: "#/definitions/mount/definitions/target"},
-								},
-							},
-							ref: "#/definitions/mount",
-						},
+					Link: Link{
+						Title:       "List existing mounts for a server",
+						Description: "",
+						HRef:        "/servers/{(#/definitions/server/definitions/port)}/mounts",
+						Rel:         "list-all",
+						Method:      "GET",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
 			},
@@ -1005,44 +1323,66 @@ func TestParseKrakenSchema(t *testing.T) {
 				},
 			},
 			MethodRouteIOMap: MethodRouteIOMap{
-				"GET": RouteIO{
-					OutType: JSONObject{
-						Name: "Mount",
-						Fields: JSONFieldList{
-							JSONField{
-								Name: "id",
-								Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+				"GET": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONObject{
+							Name: "Mount",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "id",
+									Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+								},
+								JSONField{
+									Name: "source",
+									Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+								},
+								JSONField{
+									Name: "target",
+									Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+								},
 							},
-							JSONField{
-								Name: "source",
-								Type: JSONString{ref: "#/definitions/mount/definitions/source"},
-							},
-							JSONField{
-								Name: "target",
-								Type: JSONString{ref: "#/definitions/mount/definitions/target"},
-							},
+							ref: "#/definitions/mount",
 						},
-						ref: "#/definitions/mount",
+					},
+					Link: Link{
+						Title:       "Info for a mount",
+						Description: "",
+						HRef:        "/servers/{(#/definitions/server/definitions/port)}/mounts/{(#/definitions/mount/definitions/id)}",
+						Rel:         "self",
+						Method:      "GET",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
-				"DELETE": RouteIO{
-					OutType: JSONObject{
-						Name: "Mount",
-						Fields: JSONFieldList{
-							JSONField{
-								Name: "id",
-								Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+				"DELETE": RouteIOAndLink{
+					RouteIO: RouteIO{
+						OutType: JSONObject{
+							Name: "Mount",
+							Fields: JSONFieldList{
+								JSONField{
+									Name: "id",
+									Type: JSONString{ref: "#/definitions/mount/definitions/id"},
+								},
+								JSONField{
+									Name: "source",
+									Type: JSONString{ref: "#/definitions/mount/definitions/source"},
+								},
+								JSONField{
+									Name: "target",
+									Type: JSONString{ref: "#/definitions/mount/definitions/target"},
+								},
 							},
-							JSONField{
-								Name: "source",
-								Type: JSONString{ref: "#/definitions/mount/definitions/source"},
-							},
-							JSONField{
-								Name: "target",
-								Type: JSONString{ref: "#/definitions/mount/definitions/target"},
-							},
+							ref: "#/definitions/mount",
 						},
-						ref: "#/definitions/mount",
+					},
+					Link: Link{
+						Title:       "Delete an existing mount on a server",
+						Description: "",
+						HRef:        "/servers/{(#/definitions/server/definitions/port)}/mounts/{(#/definitions/mount/definitions/id)}",
+						Rel:         "delete",
+						Method:      "DELETE",
+						EncType:     "application/json",
+						MediaType:   "application/json",
 					},
 				},
 			},
@@ -1056,15 +1396,20 @@ func TestParseKrakenSchema(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if !reflect.DeepEqual(expectedResourceRoutes, routes.ByResource()) {
-		t.Errorf("expected %#v, got %#v", expectedResourceRoutes, routes.ByResource())
-		return
+	if err := resourceRoutesEquals(expectedResourceRoutes, routes.ByResource()); err != nil {
+		t.Error(err)
 	}
 }
 
 func TestParseSchemaWithNonJSONEndpoints(t *testing.T) {
 	schema := getSchema(t, "testdata/files.json")
 	if t.Failed() {
+		return
+	}
+	sp := SchemaParser{RootSchema: schema}
+	routes, err := sp.ParseRoutes()
+	if err != nil {
+		t.Error(err)
 		return
 	}
 
@@ -1074,6 +1419,14 @@ func TestParseSchemaWithNonJSONEndpoints(t *testing.T) {
 			Name:        "files",
 			RouteParams: []RouteParam{},
 			Method:      "POST",
+			Link: Link{
+				Title:     "Create a new file using a raw binary body.",
+				HRef:      "/files",
+				Rel:       "create",
+				Method:    "POST",
+				EncType:   "application/octet-stream",
+				MediaType: "application/json",
+			},
 			RouteIO: RouteIO{
 				InputIsNotJSON: true,
 				OutType: JSONObject{
@@ -1092,6 +1445,14 @@ func TestParseSchemaWithNonJSONEndpoints(t *testing.T) {
 			Name:        "files",
 			RouteParams: []RouteParam{},
 			Method:      "GET",
+			Link: Link{
+				Title:     "List existing files",
+				HRef:      "/files",
+				Rel:       "list",
+				Method:    "GET",
+				EncType:   "application/json",
+				MediaType: "application/json",
+			},
 			RouteIO: RouteIO{
 				OutType: JSONArray{
 					Name: "ListFileOut",
@@ -1115,6 +1476,14 @@ func TestParseSchemaWithNonJSONEndpoints(t *testing.T) {
 				{Name: "file-id", Varname: "fileId", Type: JSONString{ref: "#/definitions/file/definitions/id"}},
 			},
 			Method: "GET",
+			Link: Link{
+				Title:     "Binary data of an existing file.",
+				HRef:      "/files/{(#/definitions/file/definitions/id)}",
+				Rel:       "self",
+				Method:    "GET",
+				EncType:   "application/json",
+				MediaType: "application/octet-stream",
+			},
 			RouteIO: RouteIO{
 				OutputIsNotJSON: true,
 			},
@@ -1122,14 +1491,7 @@ func TestParseSchemaWithNonJSONEndpoints(t *testing.T) {
 	}
 	sort.Sort(expectedRoutes)
 
-	sp := SchemaParser{RootSchema: schema}
-	routes, err := sp.ParseRoutes()
-	if err != nil {
+	if err := routesEquals(expectedRoutes, routes); err != nil {
 		t.Error(err)
-		return
-	}
-	if !reflect.DeepEqual(expectedRoutes, routes) {
-		t.Errorf("expected %#v, got %#v", expectedRoutes, routes)
-		return
 	}
 }

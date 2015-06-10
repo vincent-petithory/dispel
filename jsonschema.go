@@ -104,6 +104,7 @@ type Route struct {
 	Name        string
 	RouteParams []RouteParam
 	Method      string
+	Link        Link
 	RouteIO
 }
 
@@ -136,17 +137,18 @@ func (routes Routes) ByResource() ResourceRoutes {
 	resourceRouteMap := make(map[string]*ResourceRoute)
 	for _, route := range routes {
 		resourceRoute, ok := resourceRouteMap[route.Path]
+		rioal := RouteIOAndLink{RouteIO: route.RouteIO, Link: route.Link}
 		if !ok {
 			resourceRoute = &ResourceRoute{
 				Path:             route.Path,
 				Name:             route.Name,
 				RouteParams:      route.RouteParams,
-				MethodRouteIOMap: MethodRouteIOMap{route.Method: route.RouteIO},
+				MethodRouteIOMap: MethodRouteIOMap{route.Method: rioal},
 			}
 			resourceRouteMap[route.Path] = resourceRoute
 			continue
 		}
-		resourceRoute.MethodRouteIOMap[route.Method] = route.RouteIO
+		resourceRoute.MethodRouteIOMap[route.Method] = rioal
 	}
 	resourceRoutes := make(ResourceRoutes, 0, len(resourceRouteMap))
 	for _, resourceRoute := range resourceRouteMap {
@@ -213,8 +215,14 @@ type JSONTypeNamer interface {
 	JSONType
 }
 
-// MethodRouteIOMap maps a method to a RouteIO.
-type MethodRouteIOMap map[string]RouteIO
+// MethodRouteIOMap maps a method to a RouteIOAndLink.
+type MethodRouteIOMap map[string]RouteIOAndLink
+
+// RouteIOAndLink combines a RouteIO and a Link.
+type RouteIOAndLink struct {
+	RouteIO
+	Link
+}
 
 // Methods is a list of HTTP methods.
 type Methods []string
@@ -872,6 +880,7 @@ func (sp *SchemaParser) ParseRoutes() (Routes, error) {
 				Path:   p,
 				Name:   n,
 				Method: strings.ToUpper(link.Method),
+				Link:   link,
 			}
 			sp.logf("discovered route %s -> %s %q ", route.Name, route.Method, route.Path)
 
