@@ -3,6 +3,7 @@ package dispel
 import (
 	"encoding/json"
 	"os"
+	"reflect"
 	"sort"
 	"testing"
 )
@@ -12,17 +13,26 @@ import (
 func getSchema(tb testing.TB, name string) *Schema {
 	var schema Schema
 	f, err := os.Open(name)
-	ok(tb, err)
+	if err != nil {
+		tb.Error(err)
+		return nil
+	}
 	defer f.Close()
 
-	ok(tb, json.NewDecoder(f).Decode(&schema))
+	if err := json.NewDecoder(f).Decode(&schema); err != nil {
+		tb.Error(err)
+		return nil
+	}
 	return &schema
 }
 
 // getSchemaString is like getSchema but takes a string as input.
 func getSchemaString(tb testing.TB, s string) *Schema {
 	var schema Schema
-	ok(tb, json.Unmarshal([]byte(s), &schema))
+	if err := json.Unmarshal([]byte(s), &schema); err != nil {
+		tb.Error(err)
+		return nil
+	}
 	return &schema
 }
 
@@ -50,6 +60,9 @@ func TestParseSimpleJSONStruct(t *testing.T) {
         }
     }
 }`)
+	if t.Failed() {
+		return
+	}
 
 	expectedObj := JSONObject{
 		Name: schema.Title,
@@ -65,8 +78,14 @@ func TestParseSimpleJSONStruct(t *testing.T) {
 
 	sp := SchemaParser{RootSchema: schema}
 	obj, err := sp.JSONTypeFromSchema(schema.Title, schema, "")
-	ok(t, err)
-	equals(t, expectedObj, obj)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !reflect.DeepEqual(expectedObj, obj) {
+		t.Errorf("expected %#v, got %#v", expectedObj, obj)
+		return
+	}
 }
 
 func TestParseJSONStructWithMixedRef(t *testing.T) {
@@ -115,9 +134,15 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
         }
     }
 }`)
+	if t.Failed() {
+		return
+	}
 
 	spellSchema, exists := schema.Properties["spell"]
-	assert(t, exists, "definition %q not found in schema", "spell")
+	if !exists {
+		t.Errorf("definition %q not found in schema", "spell")
+		return
+	}
 	expectedObj := JSONObject{
 		Name: "Spell",
 		ref:  "#/definitions/spell",
@@ -132,12 +157,21 @@ func TestParseJSONStructWithMixedRef(t *testing.T) {
 	sort.Sort(expectedObj.Fields)
 	sp := SchemaParser{RootSchema: schema}
 	obj, err := sp.JSONTypeFromSchema("Spell", spellSchema, spellSchema.Ref)
-	ok(t, err)
-	equals(t, expectedObj, obj)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !reflect.DeepEqual(expectedObj, obj) {
+		t.Errorf("expected %#v, got %#v", expectedObj, obj)
+		return
+	}
 }
 
 func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 	schema := getSchema(t, "testdata/spells.json")
+	if t.Failed() {
+		return
+	}
 
 	expectedRoutes := Routes{
 		{
@@ -215,12 +249,21 @@ func TestParseSchemaWithRoutesOneResource(t *testing.T) {
 
 	sp := SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
-	equals(t, expectedRoutes, routes)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !reflect.DeepEqual(expectedRoutes, routes) {
+		t.Errorf("expected %#v, got %#v", expectedRoutes, routes)
+		return
+	}
 }
 
 func TestParseSchemaByResource(t *testing.T) {
 	schema := getSchema(t, "testdata/weapons-and-armors.json")
+	if t.Failed() {
+		return
+	}
 	expectedResourceRoutes := ResourceRoutes{
 		{
 			Path:        "/armors",
@@ -357,12 +400,21 @@ func TestParseSchemaByResource(t *testing.T) {
 
 	sp := SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
-	equals(t, expectedResourceRoutes, routes.ByResource())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !reflect.DeepEqual(expectedResourceRoutes, routes.ByResource()) {
+		t.Errorf("expected %#v, got %#v", expectedResourceRoutes, routes.ByResource())
+		return
+	}
 }
 
 func TestMixedRouteParams(t *testing.T) {
 	schema := getSchema(t, "testdata/one-route-mixed-params.json")
+	if t.Failed() {
+		return
+	}
 
 	expectedRoutes := Routes{
 		{
@@ -444,8 +496,14 @@ func TestMixedRouteParams(t *testing.T) {
 
 	sp := SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
-	equals(t, expectedRoutes, routes)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !reflect.DeepEqual(expectedRoutes, routes) {
+		t.Errorf("expected %#v, got %#v", expectedRoutes, routes)
+		return
+	}
 }
 
 func TestPreProcessHRefVar(t *testing.T) {
@@ -468,7 +526,10 @@ func TestPreProcessHRefVar(t *testing.T) {
 		//{href: "{+($)*}", ppHRef: "{+%24*}"},
 	}
 	for _, test := range tests {
-		equals(t, test.ppHRef, preProcessHRefVar(test.href))
+		if test.ppHRef != preProcessHRefVar(test.href) {
+			t.Errorf("expected %s, got %s", test.ppHRef, preProcessHRefVar(test.href))
+			continue
+		}
 	}
 }
 
@@ -484,12 +545,18 @@ func TestVarsFromHRef(t *testing.T) {
 
 	for _, test := range tests {
 		vars, err := varsFromHRef(test.href)
-		if !test.valid {
-			assert(t, err != nil, "Expected invalid href %q, got %q %v", test.href, vars, err)
+		if !test.valid && err == nil {
+			t.Errorf("Expected invalid href %q, got %q %v", test.href, vars, err)
 			continue
 		}
-		ok(t, err)
-		equals(t, test.vars, vars)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if !reflect.DeepEqual(test.vars, vars) {
+			t.Errorf("expected %#v, got %#v", test.vars, vars)
+			return
+		}
 	}
 }
 
@@ -505,13 +572,22 @@ func TestHRef2name(t *testing.T) {
 
 	for _, test := range tests {
 		name, err := href2name(test.href)
-		ok(t, err)
-		equals(t, test.name, name)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		if test.name != name {
+			t.Errorf("expected %s, got %s", test.name, name)
+			return
+		}
 	}
 }
 
 func TestParseKrakenSchema(t *testing.T) {
 	schema := getSchema(t, "testdata/kraken.json")
+	if t.Failed() {
+		return
+	}
 	expectedResourceRoutes := ResourceRoutes{
 		{
 			Path:        "/fileservers",
@@ -976,12 +1052,21 @@ func TestParseKrakenSchema(t *testing.T) {
 
 	sp := SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
-	equals(t, expectedResourceRoutes, routes.ByResource())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !reflect.DeepEqual(expectedResourceRoutes, routes.ByResource()) {
+		t.Errorf("expected %#v, got %#v", expectedResourceRoutes, routes.ByResource())
+		return
+	}
 }
 
 func TestParseSchemaWithNonJSONEndpoints(t *testing.T) {
 	schema := getSchema(t, "testdata/files.json")
+	if t.Failed() {
+		return
+	}
 
 	expectedRoutes := Routes{
 		{
@@ -1039,6 +1124,12 @@ func TestParseSchemaWithNonJSONEndpoints(t *testing.T) {
 
 	sp := SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
-	equals(t, expectedRoutes, routes)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if !reflect.DeepEqual(expectedRoutes, routes) {
+		t.Errorf("expected %#v, got %#v", expectedRoutes, routes)
+		return
+	}
 }

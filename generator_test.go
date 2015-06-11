@@ -13,14 +13,23 @@ import (
 
 func TestTemplateCompiles(t *testing.T) {
 	_, err := NewBundle(&SchemaParser{})
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 }
 
 func TestTemplateRoutes(t *testing.T) {
 	schema := getSchema(t, "testdata/spells.json")
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -86,23 +95,43 @@ func (r RouteSpellsOne) Location(rr RouteReverser) *url.URL {
 }
 
 `, ctx.Prgm, ctx.PkgName)))
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	tmpl, err := NewTemplate(sp, routesTmpl)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
 	out, err := format.Source(buf.Bytes())
-	ok(t, err)
-	equals(t, string(expectedOut), string(out))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if string(expectedOut) != string(out) {
+		t.Errorf("expected %#v, got %#v", string(expectedOut), string(out))
+	}
 }
 
 func TestTemplateHandlers(t *testing.T) {
 	schema := getSchema(t, "testdata/spells.json")
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -199,26 +228,44 @@ func registerHandlers(hr HandlerRegisterer, rpg RouteParamGetter, a *App, hd HTT
 		}),
 	})
 }`, ctx.Prgm, ctx.PkgName)))
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	tmpl, err := NewTemplate(sp, handlersTmpl)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
-		ok(t, err)
+		t.Error(err)
+		return
 	}
-	equals(t, string(expectedOut), string(out))
+	if string(expectedOut) != string(out) {
+		t.Errorf("expected %#v, got %#v", string(expectedOut), string(out))
+	}
 }
 
 func TestTemplateHandlerFuncs(t *testing.T) {
 	schema := getSchema(t, "testdata/spells.json")
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -248,26 +295,44 @@ func (a *App) getSpellsOne(w http.ResponseWriter, r *http.Request, spellName str
 }
 
 `, ctx.Prgm, ctx.PkgName)))
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	tmpl, err := NewTemplate(sp, handlerfuncsTmpl)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
-		ok(t, err)
+		t.Error(err)
+		return
 	}
-	equals(t, string(expectedOut), string(out))
+	if string(expectedOut) != string(out) {
+		t.Errorf("expected %#v, got %#v", string(expectedOut), string(out))
+	}
 }
 
 func TestTemplateTypesOneResource(t *testing.T) {
 	schema := getSchema(t, "testdata/spells.json")
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -293,19 +358,30 @@ type Spell struct {
     Power int   `+"`"+`json:"power"`+"`"+`
 }
 `, ctx.Prgm, ctx.PkgName)))
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	tmpl, err := NewTemplate(sp, typesTmpl)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
-		ok(t, err)
+		t.Error(err)
 	}
-	equals(t, string(expectedOut), string(out))
+	if string(expectedOut) != string(out) {
+		t.Errorf("expected %#v, got %#v", string(expectedOut), string(out))
+	}
 }
 
 func TestTemplateTypesWithImports(t *testing.T) {
@@ -369,9 +445,15 @@ func TestTemplateTypesWithImports(t *testing.T) {
         }
     }
 }`)
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -397,26 +479,45 @@ type Spell struct {
     Power int   `+"`"+`json:"power"`+"`"+`
 }
 `, ctx.Prgm, ctx.PkgName)))
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	tmpl, err := NewTemplate(sp, typesTmpl)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
-		ok(t, err)
+		t.Error(err)
+		return
 	}
-	equals(t, string(expectedOut), string(out))
+	if string(expectedOut) != string(out) {
+		t.Errorf("expected %#v, got %#v", string(expectedOut), string(out))
+		return
+	}
 }
 
 func TestTemplateTypesCompositeResources(t *testing.T) {
 	schema := getSchema(t, "testdata/rpg.json")
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -467,26 +568,45 @@ type Spell struct {
 }
 
 `, ctx.Prgm, ctx.PkgName)))
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	tmpl, err := NewTemplate(sp, typesTmpl)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
-		ok(t, err)
+		t.Error(err)
+		return
 	}
-	equals(t, string(expectedOut), string(out))
+	if string(expectedOut) != string(out) {
+		t.Errorf("expected %#v, got %#v", string(expectedOut), string(out))
+		return
+	}
 }
 
 func TestAlternateTemplate(t *testing.T) {
 	schema := getSchema(t, "testdata/rpg.json")
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -587,16 +707,28 @@ Spell
 
 `
 	tmpl, err := NewTemplate(sp, templateText)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
-	equals(t, expectedOut, buf.String())
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
+	if expectedOut != buf.String() {
+		t.Errorf("expected %#v, got %#v", expectedOut, buf.String())
+		return
+	}
 }
 
 func TestSchemaHasDuplicateRel(t *testing.T) {
 	f, err := os.Open("testdata/documents-and-products.json")
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	defer f.Close()
 	// Modify schema to give it duplicated "rel" attrs
 	var buf bytes.Buffer
@@ -612,23 +744,32 @@ func TestSchemaHasDuplicateRel(t *testing.T) {
 	}
 
 	schema := getSchemaString(t, buf.String())
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	_, err = sp.ParseRoutes()
-	assert(t, err != nil, "expected an error, got nil")
+	if err == nil {
+		t.Error("expected an error, got nil")
+		return
+	}
 
 	switch e := err.(type) {
 	case InvalidSchemaError:
 		if !strings.HasPrefix(e.Msg, "duplicate link \"rel\"") {
-			t.Fatalf("Expected duplicate link rel error msg, got %s", e.Msg)
+			t.Errorf("Expected duplicate link rel error msg, got %s", e.Msg)
 		}
 	default:
-		t.Fatalf("Got unexpected error %v", err)
+		t.Errorf("Got unexpected error %v", err)
 	}
 }
 
 func TestSchemaHasRedefinedTypes(t *testing.T) {
 	f, err := os.Open("testdata/documents-and-products.json")
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	defer f.Close()
 	// Modify schema to give it duplicated "rel" attrs
 	var buf bytes.Buffer
@@ -653,9 +794,15 @@ func TestSchemaHasRedefinedTypes(t *testing.T) {
 	}
 
 	schema := getSchemaString(t, buf.String())
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	_, err = sp.ParseRoutes()
-	assert(t, err != nil, "expected an error, got nil")
+	if err == nil {
+		t.Error("expected an error, got nil")
+		return
+	}
 
 	switch e := err.(type) {
 	case *TypeRedefinitionError:
@@ -668,18 +815,26 @@ func TestSchemaHasRedefinedTypes(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Fatalf("Expected redefined type to be one of %q, got %s", candidateRenames, e.Name)
+			t.Errorf("Expected redefined type to be one of %q, got %s", candidateRenames, e.Name)
+			return
 		}
 	default:
-		t.Fatalf("Got unexpected error %v", err)
+		t.Errorf("Got unexpected error %v", err)
+		return
 	}
 }
 
 func TestTemplateHandlerFuncsAlreadyDefined(t *testing.T) {
 	schema := getSchema(t, "testdata/spells.json")
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -702,26 +857,45 @@ func (a *App) getSpellsOne(w http.ResponseWriter, r *http.Request, spellName str
 }
 
 `, ctx.Prgm, ctx.PkgName)))
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	tmpl, err := NewTemplate(sp, handlerfuncsTmpl)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
-		ok(t, err)
+		t.Error(err)
+		return
 	}
-	equals(t, string(expectedOut), string(out))
+	if string(expectedOut) != string(out) {
+		t.Errorf("expected %#v, got %#v", string(expectedOut), string(out))
+		return
+	}
 }
 
 func TestTemplateTypesCompositeResourcesAlreadyDefined(t *testing.T) {
 	schema := getSchema(t, "testdata/rpg.json")
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -763,26 +937,45 @@ type Spell struct {
 }
 
 `, ctx.Prgm, ctx.PkgName)))
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	tmpl, err := NewTemplate(sp, typesTmpl)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
-		ok(t, err)
+		t.Error(err)
+		return
 	}
-	equals(t, string(expectedOut), string(out))
+	if string(expectedOut) != string(out) {
+		t.Errorf("expected %#v, got %#v", string(expectedOut), string(out))
+		return
+	}
 }
 
 func TestTemplateHandlersWithNonJSONEndpoints(t *testing.T) {
 	schema := getSchema(t, "testdata/files.json")
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -875,26 +1068,45 @@ func registerHandlers(hr HandlerRegisterer, rpg RouteParamGetter, a *App, hd HTT
 		}),
 	})
 }`, ctx.Prgm, ctx.PkgName)))
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	tmpl, err := NewTemplate(sp, handlersTmpl)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
-		ok(t, err)
+		t.Error(err)
+		return
 	}
-	equals(t, string(expectedOut), string(out))
+	if string(expectedOut) != string(out) {
+		t.Errorf("expected %#v, got %#v", string(expectedOut), string(out))
+		return
+	}
 }
 
 func TestTemplateHandlerFuncsWithNonJSONEndpoints(t *testing.T) {
 	schema := getSchema(t, "testdata/files.json")
+	if t.Failed() {
+		return
+	}
 	sp := &SchemaParser{RootSchema: schema}
 	routes, err := sp.ParseRoutes()
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	ctx := &Context{
 		Prgm:                "dispel",
@@ -924,17 +1136,30 @@ func (a *App) getFilesOne(w http.ResponseWriter, r *http.Request, fileId string)
 	return http.StatusNotImplemented, nil
 }
 `, ctx.Prgm, ctx.PkgName)))
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	tmpl, err := NewTemplate(sp, handlerfuncsTmpl)
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	var buf bytes.Buffer
-	ok(t, tmpl.Generate(&buf, ctx))
+	if err := tmpl.Generate(&buf, ctx); err != nil {
+		t.Error(err)
+		return
+	}
 	out, err := format.Source(buf.Bytes())
 	if err != nil {
 		t.Logf(buf.String())
-		ok(t, err)
+		t.Error(err)
+		return
 	}
-	equals(t, string(expectedOut), string(out))
+	if string(expectedOut) != string(out) {
+		t.Errorf("expected %#v, got %#v", string(expectedOut), string(out))
+		return
+	}
 }

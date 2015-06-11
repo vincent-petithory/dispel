@@ -3,46 +3,12 @@ package dispel
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"sort"
 	"testing"
 )
-
-func init() {
-	log.SetFlags(0)
-	log.SetOutput(os.Stdout)
-}
-
-// assert fails the test if the condition is false.
-func assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
-	if !condition {
-		_, file, line, _ := runtime.Caller(1)
-		log.Printf("\033[31m%s:%d: "+msg+"\033[39m\n", append([]interface{}{filepath.Base(file), line}, v...)...)
-		tb.FailNow()
-	}
-}
-
-// ok fails the test if an err is not nil.
-func ok(tb testing.TB, err error) {
-	if err != nil {
-		_, file, line, _ := runtime.Caller(1)
-		log.Printf("\033[31m%s:%d: unexpected error: %s\033[39m\n", filepath.Base(file), line, err.Error())
-		tb.FailNow()
-	}
-}
-
-// equals fails the test if expected is not equal to actual.
-func equals(tb testing.TB, expected, actual interface{}) {
-	if !reflect.DeepEqual(expected, actual) {
-		_, file, line, _ := runtime.Caller(1)
-		log.Printf("\033[31m%s:%d:\n\n\texpected: %#v\n\n\tgot: %#v\033[39m\n", filepath.Base(file), line, expected, actual)
-		tb.FailNow()
-	}
-}
 
 func TestFindTypesFuncs(t *testing.T) {
 	pkgName := "funcs"
@@ -81,23 +47,38 @@ func (fg funcGroup2) F23() {}
 	sort.Strings(expectedFuncs)
 
 	tmpDir, err := ioutil.TempDir("", "find-types-funcs-")
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	defer os.RemoveAll(tmpDir)
 
-	ok(t, os.Mkdir(filepath.Join(tmpDir, pkgName), 0700))
+	if err := os.Mkdir(filepath.Join(tmpDir, pkgName), 0700); err != nil {
+		t.Error(err)
+		return
+	}
 
 	for name, contents := range files {
-		ok(t, ioutil.WriteFile(filepath.Join(tmpDir, pkgName, name), []byte(contents), 0600))
+		if err := ioutil.WriteFile(filepath.Join(tmpDir, pkgName, name), []byte(contents), 0600); err != nil {
+			t.Error(err)
+			continue
+		}
 	}
 
 	funcDecls, err := FindTypesFuncs(filepath.Join(tmpDir, pkgName), pkgName, types, []string{"otfuncs.go"})
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	funcNames := make([]string, 0, len(funcDecls))
 	for funcName := range funcDecls {
 		funcNames = append(funcNames, funcName)
 	}
 	sort.Strings(funcNames)
-	equals(t, expectedFuncs, funcNames)
+	if !reflect.DeepEqual(expectedFuncs, funcNames) {
+		t.Errorf("expected %#v, got %#v", expectedFuncs, funcNames)
+		return
+	}
 }
 
 func TestFindTypes(t *testing.T) {
@@ -161,21 +142,36 @@ const (
 	sort.Strings(expectedTypes)
 
 	tmpDir, err := ioutil.TempDir("", "find-types-")
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	defer os.RemoveAll(tmpDir)
 
-	ok(t, os.Mkdir(filepath.Join(tmpDir, pkgName), 0700))
+	if err := os.Mkdir(filepath.Join(tmpDir, pkgName), 0700); err != nil {
+		t.Error(err)
+		return
+	}
 
 	for name, contents := range files {
-		ok(t, ioutil.WriteFile(filepath.Join(tmpDir, pkgName, name), []byte(contents), 0600))
+		if err := ioutil.WriteFile(filepath.Join(tmpDir, pkgName, name), []byte(contents), 0600); err != nil {
+			t.Error(err)
+			continue
+		}
 	}
 
 	typeSpecs, err := FindTypes(filepath.Join(tmpDir, pkgName), pkgName, []string{"exc.go"})
-	ok(t, err)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	typeNames := make([]string, 0, len(typeSpecs))
 	for typeName := range typeSpecs {
 		typeNames = append(typeNames, typeName)
 	}
 	sort.Strings(typeNames)
-	equals(t, expectedTypes, typeNames)
+	if !reflect.DeepEqual(expectedTypes, typeNames) {
+		t.Errorf("expected %#v, got %#v", expectedTypes, typeNames)
+		return
+	}
 }

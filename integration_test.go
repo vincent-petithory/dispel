@@ -7,14 +7,11 @@ import (
 	"go/format"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"reflect"
-	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -22,33 +19,6 @@ import (
 
 	"github.com/vincent-petithory/dispel"
 )
-
-// assert fails the test if the condition is false.
-func assert(tb testing.TB, condition bool, msg string, v ...interface{}) {
-	if !condition {
-		_, file, line, _ := runtime.Caller(1)
-		log.Printf("\033[31m%s:%d: "+msg+"\033[39m\n", append([]interface{}{filepath.Base(file), line}, v...)...)
-		tb.FailNow()
-	}
-}
-
-// ok fails the test if an err is not nil.
-func ok(tb testing.TB, err error) {
-	if err != nil {
-		_, file, line, _ := runtime.Caller(1)
-		log.Printf("\033[31m%s:%d: unexpected error: %s\033[39m\n", filepath.Base(file), line, err.Error())
-		tb.FailNow()
-	}
-}
-
-// equals fails the test if expected is not equal to actual.
-func equals(tb testing.TB, expected, actual interface{}) {
-	if !reflect.DeepEqual(expected, actual) {
-		_, file, line, _ := runtime.Caller(1)
-		log.Printf("\033[31m%s:%d:\n\n\texpected: %#v\n\n\tgot: %#v\033[39m\n", filepath.Base(file), line, expected, actual)
-		tb.FailNow()
-	}
-}
 
 func makeGopathEnv(workspacedir string) []string {
 	var envs []string
@@ -85,14 +55,20 @@ func (it *IntegrationTest) Run(tb testing.TB) {
 
 	// Copy testdata tree
 	pkgdir, err := copyWorkspace(tmpdir)
-	ok(tb, err)
+	if err != nil {
+		tb.Error(err)
+		return
+	}
 
 	// Run install func
 	it.InstallFn(tb, tmpdir, pkgdir)
 
 	// Install generated project
 	_, err = exec.LookPath("go")
-	ok(tb, err)
+	if err != nil {
+		tb.Error(err)
+		return
+	}
 
 	installCmd := exec.Command("go", "install", "-v", "./...")
 	installCmd.Dir = pkgdir
@@ -105,14 +81,20 @@ func (it *IntegrationTest) Run(tb testing.TB) {
 	// Control we have the binary
 	prgm := filepath.Join(tmpdir, "bin", filepath.Base(pkgdir))
 	_, err = os.Stat(prgm)
-	ok(tb, err)
+	if err != nil {
+		tb.Error(err)
+		return
+	}
 
 	// Run the server
 	var serverBuf bytes.Buffer
 	cmd := exec.Command(prgm, "--addr", "localhost:7777")
 	cmd.Stdout = &serverBuf
 	cmd.Stderr = &serverBuf
-	ok(tb, cmd.Start())
+	if err := cmd.Start(); err != nil {
+		tb.Error(err)
+		return
+	}
 	defer func() {
 		cmd.Process.Signal(syscall.SIGTERM)
 	}()
@@ -120,7 +102,10 @@ func (it *IntegrationTest) Run(tb testing.TB) {
 	time.Sleep(time.Millisecond * 500)
 
 	apiURL, err := url.Parse("http://localhost:7777")
-	ok(tb, err)
+	if err != nil {
+		tb.Error(err)
+		return
+	}
 	// Run tests
 	it.TestFn(tb, apiURL)
 
@@ -128,7 +113,8 @@ func (it *IntegrationTest) Run(tb testing.TB) {
 		cmd.Process.Signal(syscall.SIGTERM)
 	}()
 	if err := cmd.Wait(); err != nil {
-		tb.Error(serverBuf.String())
+		tb.Errorf("%v\nOutput: %s", err, serverBuf.String())
+		return
 	}
 }
 
@@ -194,18 +180,28 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithAPI(t *testing.T) {
 		InstallFn: func(tb testing.TB, workspacedir string, pkgdir string) {
 			var schema dispel.Schema
 			f, err := os.Open("testdata/rpg.json")
-			ok(tb, err)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 			defer f.Close()
 
-			ok(tb, json.NewDecoder(f).Decode(&schema))
+			if err := json.NewDecoder(f).Decode(&schema); err != nil {
+				t.Error(err)
+				return
+			}
 
 			sp := &dispel.SchemaParser{RootSchema: &schema}
 			routes, err := sp.ParseRoutes()
-			ok(tb, err)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
 			bundle, err := dispel.NewBundle(sp)
 			if err != nil {
-				log.Fatal(err)
+				t.Error(err)
+				return
 			}
 
 			ctx := &dispel.Context{
@@ -218,7 +214,10 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithAPI(t *testing.T) {
 			// Exec templates
 			var buf bytes.Buffer
 			for _, name := range bundle.Names() {
-				ok(tb, bundle.ByName(name).Generate(&buf, ctx))
+				if err := bundle.ByName(name).Generate(&buf, ctx); err != nil {
+					t.Error(err)
+					continue
+				}
 				// Format source with gofmt
 				src, err := format.Source(buf.Bytes())
 				if err != nil {
@@ -228,15 +227,25 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithAPI(t *testing.T) {
 				}
 
 				// Write file to disk
-				ok(tb, ioutil.WriteFile(filepath.Join(pkgdir, fmt.Sprintf("dispel_%s.go", name)), src, 0666))
+				if err := ioutil.WriteFile(filepath.Join(pkgdir, fmt.Sprintf("dispel_%s.go", name)), src, 0666); err != nil {
+					t.Error(err)
+					buf.Reset()
+					continue
+				}
 				buf.Reset()
 			}
 
 			// Write defaults
 			defaultImpl, err := dispel.NewDefaultImplBundle()
-			ok(tb, err)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 			for _, name := range defaultImpl.Names() {
-				ok(tb, defaultImpl.ExecuteTemplate(&buf, name, ctx.Prgm, ctx.PkgName))
+				if err := defaultImpl.ExecuteTemplate(&buf, name, ctx.Prgm, ctx.PkgName); err != nil {
+					t.Error(err)
+					continue
+				}
 				// Format source with gofmt
 				src, err := format.Source(buf.Bytes())
 				if err != nil {
@@ -246,7 +255,11 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithAPI(t *testing.T) {
 				}
 
 				// Write file to disk
-				ok(tb, ioutil.WriteFile(filepath.Join(pkgdir, name+".go"), src, 0666))
+				if err := ioutil.WriteFile(filepath.Join(pkgdir, name+".go"), src, 0666); err != nil {
+					t.Error(err)
+					buf.Reset()
+					continue
+				}
 				buf.Reset()
 			}
 		},
@@ -268,7 +281,10 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithCmd(t *testing.T) {
 			}
 
 			_, err = exec.LookPath("dispel")
-			ok(tb, err)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
 			dispelCmd := exec.Command(
 				"dispel",
@@ -281,7 +297,8 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithCmd(t *testing.T) {
 			)
 			out, err = dispelCmd.CombinedOutput()
 			if err != nil {
-				tb.Fatalf("%s\n\ndispel: %v", string(out), err)
+				tb.Errorf("%s\n\ndispel: %v", string(out), err)
+				return
 			}
 		},
 		TestFn: testRPGSchemaAPINoImpl,
@@ -302,9 +319,15 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithGoGenerate(t *testing.T) {
 			}
 
 			_, err = exec.LookPath("dispel")
-			ok(tb, err)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
-			ok(tb, copyFile(filepath.Join(pkgdir, "schema.json"), "testdata/rpg.json"))
+			if err := copyFile(filepath.Join(pkgdir, "schema.json"), "testdata/rpg.json"); err != nil {
+				t.Error(err)
+				return
+			}
 
 			data := fmt.Sprintf("package main\n\n//go:generate %s\n", strings.Join([]string{
 				"dispel",
@@ -314,10 +337,16 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithGoGenerate(t *testing.T) {
 				"schema.json",
 			}, " "))
 
-			ok(tb, ioutil.WriteFile(filepath.Join(pkgdir, "dispelgen.go"), []byte(data), 0666))
+			if err := ioutil.WriteFile(filepath.Join(pkgdir, "dispelgen.go"), []byte(data), 0666); err != nil {
+				t.Error(err)
+				return
+			}
 
 			pkgname, err := filepath.Rel(filepath.Join(workspacedir, "src"), pkgdir)
-			ok(tb, err)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 			goGenerateCmd := exec.Command(
 				"go", "generate", "-x", pkgname,
 			)
@@ -346,12 +375,18 @@ func TestGenerateAllFromRPGJSONSchemaNoUserImplWithGoGenerateAndSomeTypesAlready
 			}
 
 			_, err = exec.LookPath("dispel")
-			ok(tb, err)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
-			ok(tb, copyFile(filepath.Join(pkgdir, "schema.json"), "testdata/rpg.json"))
+			if err := copyFile(filepath.Join(pkgdir, "schema.json"), "testdata/rpg.json"); err != nil {
+				t.Error(err)
+				return
+			}
 
 			// Override a type generated by dispel
-			ok(tb, ioutil.WriteFile(filepath.Join(pkgdir, "types.go"), []byte(`package main
+			if err := ioutil.WriteFile(filepath.Join(pkgdir, "types.go"), []byte(`package main
 import (
     "time"
 )
@@ -363,7 +398,10 @@ type Character struct {
     CreatedAt time.Time   `+"`"+`json:"createdAt"`+"`"+`
 }
 
-`), 0666))
+`), 0666); err != nil {
+				t.Error(err)
+				return
+			}
 
 			data := fmt.Sprintf("package main\n\n//go:generate %s\n", strings.Join([]string{
 				"dispel",
@@ -373,10 +411,16 @@ type Character struct {
 				"schema.json",
 			}, " "))
 
-			ok(tb, ioutil.WriteFile(filepath.Join(pkgdir, "dispelgen.go"), []byte(data), 0666))
+			if err := ioutil.WriteFile(filepath.Join(pkgdir, "dispelgen.go"), []byte(data), 0666); err != nil {
+				t.Error(err)
+				return
+			}
 
 			pkgname, err := filepath.Rel(filepath.Join(workspacedir, "src"), pkgdir)
-			ok(tb, err)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 			goGenerateCmd := exec.Command(
 				"go", "generate", "-x", pkgname,
 			)
@@ -423,11 +467,19 @@ func testRPGSchemaAPINoImpl(tb testing.TB, apiURL *url.URL) {
 		}
 		req, err := http.NewRequest(test.Method, u.String(), body)
 		req.Header.Set("Content-Type", "application/json")
-		ok(tb, err)
+		if err != nil {
+			tb.Error(err)
+			continue
+		}
 		resp, err := http.DefaultClient.Do(req)
-		ok(tb, err)
+		if err != nil {
+			tb.Error(err)
+			continue
+		}
 		resp.Body.Close()
-		assert(tb, resp.StatusCode == test.Code, "%s %q responded with %d", test.Method, test.Path, resp.StatusCode)
+		if resp.StatusCode != test.Code {
+			tb.Errorf("%s %q responded with %d", test.Method, test.Path, resp.StatusCode)
+		}
 	}
 }
 
@@ -446,9 +498,15 @@ func TestGenerateAllFromFilesJSONSchemaNoUserImplWithGoGenerate(t *testing.T) {
 			}
 
 			_, err = exec.LookPath("dispel")
-			ok(tb, err)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
-			ok(tb, copyFile(filepath.Join(pkgdir, "schema.json"), "testdata/files.json"))
+			if err := copyFile(filepath.Join(pkgdir, "schema.json"), "testdata/files.json"); err != nil {
+				t.Error(err)
+				return
+			}
 
 			data := fmt.Sprintf("package main\n\n//go:generate %s\n", strings.Join([]string{
 				"dispel",
@@ -458,13 +516,17 @@ func TestGenerateAllFromFilesJSONSchemaNoUserImplWithGoGenerate(t *testing.T) {
 				"schema.json",
 			}, " "))
 
-			ok(tb, ioutil.WriteFile(filepath.Join(pkgdir, "dispelgen.go"), []byte(data), 0666))
+			if err := ioutil.WriteFile(filepath.Join(pkgdir, "dispelgen.go"), []byte(data), 0666); err != nil {
+				t.Error(err)
+				return
+			}
 
 			pkgname, err := filepath.Rel(filepath.Join(workspacedir, "src"), pkgdir)
-			ok(tb, err)
-			goGenerateCmd := exec.Command(
-				"go", "generate", "-x", pkgname,
-			)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			goGenerateCmd := exec.Command("go", "generate", "-x", pkgname)
 			goGenerateCmd.Env = makeGopathEnv(workspacedir)
 
 			out, err = goGenerateCmd.CombinedOutput()
@@ -497,10 +559,18 @@ func testFilesSchemaAPINoImpl(tb testing.TB, apiURL *url.URL) {
 			body = bytes.NewReader(test.Body)
 		}
 		req, err := http.NewRequest(test.Method, u.String(), body)
-		ok(tb, err)
+		if err != nil {
+			tb.Error(err)
+			continue
+		}
 		resp, err := http.DefaultClient.Do(req)
-		ok(tb, err)
+		if err != nil {
+			tb.Error(err)
+			continue
+		}
 		resp.Body.Close()
-		assert(tb, resp.StatusCode == test.Code, "%s %q responded with %d", test.Method, test.Path, resp.StatusCode)
+		if resp.StatusCode != test.Code {
+			tb.Errorf("%s %q responded with %d", test.Method, test.Path, resp.StatusCode)
+		}
 	}
 }
