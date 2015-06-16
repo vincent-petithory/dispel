@@ -2,7 +2,7 @@
 
 package {{ .PkgName }}
 
-{{ if allHandlerFuncsImplemented .Routes .ExistingHandlers }}// No default handler func was generated, because all are implemented.
+{{ if allHandlerFuncsImplemented }}// No default handler func was generated, because all are implemented.
 {{ else }}import (
 	"net/http"
 )

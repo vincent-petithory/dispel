@@ -16,11 +16,18 @@ import (
 //go:generate asset --var=handlerfuncsTmpl handlerfuncs.go.tmpl
 //go:generate asset --var=typesTmpl types.go.tmpl
 
+// Generator defines the basic interface for generating data using a Context.
+type Generator interface {
+	Generate(wr io.Writer, ctx *Context) error
+}
+
+// NamedGenerator represents a Generator with a name.
 type NamedGenerator struct {
 	Name string
 	Generator
 }
 
+// Bundle represents the group of the 4 dispel generators producing the server code.
 type Bundle struct {
 	Routes       NamedGenerator
 	Handlers     NamedGenerator
@@ -28,6 +35,7 @@ type Bundle struct {
 	Types        NamedGenerator
 }
 
+// NewBundle returns a Bundle for the SchemaParser.
 func NewBundle(sp *SchemaParser) (*Bundle, error) {
 	routes, err := NewTemplate(sp, routesTmpl)
 	if err != nil {
@@ -53,6 +61,7 @@ func NewBundle(sp *SchemaParser) (*Bundle, error) {
 	}, nil
 }
 
+// Names returns the names of the generators in the bundle.
 func (b *Bundle) Names() []string {
 	names := []string{
 		b.Routes.Name,
@@ -64,6 +73,7 @@ func (b *Bundle) Names() []string {
 	return names
 }
 
+// ByName retrieves a Generator in the bundle by its name.
 func (b *Bundle) ByName(name string) Generator {
 	switch name {
 	case b.Routes.Name:
@@ -77,10 +87,6 @@ func (b *Bundle) ByName(name string) Generator {
 	default:
 		return nil
 	}
-}
-
-type Generator interface {
-	Generate(wr io.Writer, ctx *Context) error
 }
 
 func tmpl(a asset) string {
@@ -98,41 +104,10 @@ type Context struct {
 	ExistingTypes       []string      // list of existing types in the target package.
 }
 
-func handlerFuncName(routeMethod string, routeName string) string {
-	return strings.ToLower(routeMethod) + symbolName(routeName)
-}
-
 // NewTemplate returns a new Template based on the SchemaParser using text.
 func NewTemplate(sp *SchemaParser, text string) (*Template, error) {
-	t, err := template.New("").Funcs(NewTemplateFuncMap(sp)).Parse(text)
-	if err != nil {
-		return nil, err
-	}
-	return &Template{T: t, Schema: sp}, nil
-}
-
-type Template struct {
-	T      *template.Template
-	Schema *SchemaParser
-
-	name string
-}
-
-// Name returns the name of the template.
-func (t *Template) Name() string {
-	return t.name
-}
-
-// Generate implements the Generator interface.
-// It executes the template with the ctx, and writes the output to w. The ctx is forced to use the Template's SchemaParser.
-func (t *Template) Generate(w io.Writer, ctx *Context) error {
-	ctx.Schema = t.Schema
-	return t.T.Execute(w, ctx)
-}
-
-// NewTemplateFuncMap returns a template.FuncMap useful for building dispel text templates.
-func NewTemplateFuncMap(sp *SchemaParser) template.FuncMap {
-	return template.FuncMap{
+	var tmpl Template
+	t, err := template.New("").Funcs(template.FuncMap{
 		"tolower":    strings.ToLower,
 		"capitalize": capitalize,
 		"symbolName": symbolName,
@@ -144,112 +119,165 @@ func NewTemplateFuncMap(sp *SchemaParser) template.FuncMap {
 			}
 			return false
 		},
-		"handlerFuncName": handlerFuncName,
-		"allHandlerFuncsImplemented": func(routes Routes, existingHandlers []string) bool {
-		LRoutesLoop:
-			for _, route := range routes {
-				fname := handlerFuncName(route.Method, route.Name)
-				for _, h := range existingHandlers {
-					if h == fname {
-						continue LRoutesLoop
-					}
-				}
-				return false
-			}
-			return true
-		},
-		"varname": func(s string) string {
-			var buf bytes.Buffer
-			var pickedFirstNonSymbolRune bool
-			for _, r := range s {
-				switch {
-				case r == '*':
-					continue
-				case unicode.IsUpper(r):
-					_, _ = buf.WriteRune(unicode.ToLower(r))
-					pickedFirstNonSymbolRune = true
-				default:
-					if !pickedFirstNonSymbolRune {
-						_, _ = buf.WriteRune(unicode.ToLower(r))
-						pickedFirstNonSymbolRune = true
-					}
-				}
-			}
-			return buf.String()
-		},
-		"typeImports": func(routes Routes) []string {
-			var imports []string
-			for _, route := range routes {
-				for _, typ := range []JSONType{route.InType, route.OutType} {
-					if typ == nil {
-						continue
-					}
-					routes.walkType(typ, func(jt JSONType) {
-						_, ok := jt.(JSONDateTime)
-						if ok {
-							imports = append(imports, "time")
-						}
-					})
-				}
-			}
-			sort.Strings(imports)
-			return imports
-		},
-		"printTypeDef": func(j JSONType) string {
-			// we don't want type with a slice as underlying type.
-			// See https://golang.org/ref/spec#Assignability
-			_, ok := j.(JSONArray)
-			if ok {
-				return ""
-			}
-			return fmt.Sprintf("type %s %s", sp.JSONToGoType(j, false), sp.JSONToGoType(j, true))
-		},
-		"typeNeedsAddr": func(j JSONType) bool {
-			switch j.(type) {
-			case JSONArray:
-				return false
-			default:
-				return true
-			}
-		},
+		"allHandlerFuncsImplemented": tmpl.AllHandlerFuncsImplemented,
+		"handlerFuncName":            tmpl.HandlerFuncName,
+		"typeImports":                tmpl.TypeImports,
+		"printTypeDef":               tmpl.PrintTypeDef,
 		"printTypeName": func(j JSONType) string {
 			return sp.JSONToGoType(j, false)
 		},
-		"printSmartDerefType": func(j JSONType) string {
-			// really smart
-			_, ok := j.(JSONObject)
-			if ok {
-				return "*" + sp.JSONToGoType(j, false)
-			}
-			return sp.JSONToGoType(j, false)
-		},
-		"routesForType": func(routes Routes, j JSONType) []RouteAndIOTypeNames {
-			var froutes []RouteAndIOTypeNames
-			def := sp.JSONToGoType(j, false)
-			for _, route := range routes {
-				if route.InType != nil {
-					inDef := sp.JSONToGoType(route.InType, false)
-					if inDef == def || inDef == "[]"+def {
-						froutes = append(froutes, RouteAndIOTypeNames{
-							Route:         route,
-							InputTypeName: inDef,
-						})
-					}
-				}
-				if route.OutType != nil {
-					outDef := sp.JSONToGoType(route.OutType, false)
-					if outDef == def || outDef == "[]"+def {
-						froutes = append(froutes, RouteAndIOTypeNames{
-							Route:          route,
-							OutputTypeName: outDef,
-						})
-					}
-				}
-			}
-			sort.Sort(RoutesAndIOTypeNames(froutes))
-			return froutes
-		},
+		"typeNeedsAddr":       tmpl.TypeNeedsAddr,
+		"printSmartDerefType": tmpl.PrintSmartDerefType,
+		"routesForType":       tmpl.RoutesForType,
+		"varname":             tmpl.Varname,
+	}).Parse(text)
+	if err != nil {
+		return nil, err
 	}
+	tmpl.T = t
+	tmpl.Schema = sp
+	return &tmpl, nil
+}
+
+// Template is a dispel Generator making use of a text/template for producing its output.
+type Template struct {
+	T      *template.Template
+	Schema *SchemaParser
+
+	name string
+	ctx  *Context
+}
+
+// AllHandlerFuncsImplemented returns true if all dispel's generated handlerfuncs are implemented in the target package.
+func (t *Template) AllHandlerFuncsImplemented() bool {
+LRoutesLoop:
+	for _, route := range t.ctx.Routes {
+		fname := t.HandlerFuncName(route.Method, route.Name)
+		for _, h := range t.ctx.ExistingHandlers {
+			if h == fname {
+				continue LRoutesLoop
+			}
+		}
+		return false
+	}
+	return true
+}
+
+// HandlerFuncName returns the name of a handlerfunc for a route method and name.
+func (t *Template) HandlerFuncName(routeMethod string, routeName string) string {
+	return strings.ToLower(routeMethod) + symbolName(routeName)
+}
+
+// TypeImports returns the list of packages to import for the types generated by dispel.
+func (t *Template) TypeImports() []string {
+	var imports []string
+	for _, route := range t.ctx.Routes {
+		for _, typ := range []JSONType{route.InType, route.OutType} {
+			if typ == nil {
+				continue
+			}
+			t.ctx.Routes.walkType(typ, func(jt JSONType) {
+				_, ok := jt.(JSONDateTime)
+				if ok {
+					imports = append(imports, "time")
+				}
+			})
+		}
+	}
+	sort.Strings(imports)
+	return imports
+}
+
+// PrintTypeDef returns a string representing a valid Go type definition for j.
+func (t *Template) PrintTypeDef(j JSONType) string {
+	// we don't want type with a slice as underlying type.
+	// See https://golang.org/ref/spec#Assignability
+	_, ok := j.(JSONArray)
+	if ok {
+		return ""
+	}
+	return fmt.Sprintf("type %s %s", t.ctx.Schema.JSONToGoType(j, false), t.ctx.Schema.JSONToGoType(j, true))
+}
+
+// TypeNeedsAddr returns true if it's necessary to take the address of a type.
+func (t *Template) TypeNeedsAddr(j JSONType) bool {
+	_, ok := j.(JSONArray)
+	if ok {
+		return false
+	}
+	return true
+}
+
+// PrintSmartDerefType returns a pointer to j if j is a JSONObject.
+func (t *Template) PrintSmartDerefType(j JSONType) string {
+	// really smart
+	_, ok := j.(JSONObject)
+	if ok {
+		return "*" + t.ctx.Schema.JSONToGoType(j, false)
+	}
+	return t.ctx.Schema.JSONToGoType(j, false)
+}
+
+// RoutesForType returns the routes in which j is involved, either as itself or as a slice of itself.
+func (t *Template) RoutesForType(j JSONType) []RouteAndIOTypeNames {
+	var froutes []RouteAndIOTypeNames
+	def := t.ctx.Schema.JSONToGoType(j, false)
+	for _, route := range t.ctx.Routes {
+		if route.InType != nil {
+			inDef := t.ctx.Schema.JSONToGoType(route.InType, false)
+			if inDef == def || inDef == "[]"+def {
+				froutes = append(froutes, RouteAndIOTypeNames{
+					Route:         route,
+					InputTypeName: inDef,
+				})
+			}
+		}
+		if route.OutType != nil {
+			outDef := t.ctx.Schema.JSONToGoType(route.OutType, false)
+			if outDef == def || outDef == "[]"+def {
+				froutes = append(froutes, RouteAndIOTypeNames{
+					Route:          route,
+					OutputTypeName: outDef,
+				})
+			}
+		}
+	}
+	sort.Sort(RoutesAndIOTypeNames(froutes))
+	return froutes
+}
+
+// Varname returns a variable name for a type name.
+func (t *Template) Varname(s string) string {
+	var buf bytes.Buffer
+	var pickedFirstNonSymbolRune bool
+	for _, r := range s {
+		switch {
+		case r == '*':
+			continue
+		case unicode.IsUpper(r):
+			_, _ = buf.WriteRune(unicode.ToLower(r))
+			pickedFirstNonSymbolRune = true
+		default:
+			if !pickedFirstNonSymbolRune {
+				_, _ = buf.WriteRune(unicode.ToLower(r))
+				pickedFirstNonSymbolRune = true
+			}
+		}
+	}
+	return buf.String()
+}
+
+// Name returns the name of the template.
+func (t *Template) Name() string {
+	return t.name
+}
+
+// Generate implements the Generator interface.
+// It executes the template with the ctx, and writes the output to w. The ctx is forced to use the Template's SchemaParser.
+func (t *Template) Generate(w io.Writer, ctx *Context) error {
+	t.ctx = ctx
+	t.ctx.Schema = t.Schema
+	return t.T.Execute(w, ctx)
 }
 
 // RouteAndIOTypeNames represents a Route with the names of the types on its input and output.
@@ -259,6 +287,7 @@ type RouteAndIOTypeNames struct {
 	OutputTypeName string
 }
 
+// RoutesAndIOTypeNames is defined for sorting RouteIOAndTypeNames by method and path.
 type RoutesAndIOTypeNames []RouteAndIOTypeNames
 
 func (routes RoutesAndIOTypeNames) Len() int      { return len(routes) }

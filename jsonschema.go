@@ -729,18 +729,24 @@ type JSONType interface {
 	Ref() string
 }
 
+// ResolveType resolves the JSONType by following its Ref backwards.
+func (sp *SchemaParser) ResolveType(jt JSONType) JSONType {
+	ref := jt.Ref()
+	if ref != "" {
+		tjt, ok := sp.refJSONTypeMap[ref]
+		if !ok {
+			log.Panicf("unregistered json type %s", ref)
+		}
+		return tjt
+	}
+	return jt
+}
+
 // JSONToGoType prints Go source code for the JSONType.
 // globalScope tells whether we are in the package scope of the go source file,
 // or inside a type.
 func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
-	ref := jt.Ref()
-	if ref != "" {
-		tjt, ok := sp.RefJSONTypeMap[ref]
-		if !ok {
-			log.Panicf("unregistered json type %s", ref)
-		}
-		jt = tjt
-	}
+	jt = sp.ResolveType(jt)
 	// if we're not in the package scope, we'll just write the name of
 	// the type, if it has one.
 	n, ok := jt.(TypeNamer)
@@ -819,7 +825,7 @@ func (e InvalidSchemaError) Error() string {
 type SchemaParser struct {
 	RootSchema     *Schema
 	Log            *log.Logger
-	RefJSONTypeMap map[string]JSONType
+	refJSONTypeMap map[string]JSONType
 }
 
 func (sp *SchemaParser) logf(format string, v ...interface{}) {
@@ -992,12 +998,12 @@ func (sp *SchemaParser) JSONTypeFromSchema(defaultName string, schema *Schema, r
 		if !(err == nil && jt != nil && jt.Ref() != "") {
 			return
 		}
-		if sp.RefJSONTypeMap == nil {
-			sp.RefJSONTypeMap = make(map[string]JSONType)
+		if sp.refJSONTypeMap == nil {
+			sp.refJSONTypeMap = make(map[string]JSONType)
 		}
-		if pjt, ok := sp.RefJSONTypeMap[jt.Ref()]; !ok {
+		if pjt, ok := sp.refJSONTypeMap[jt.Ref()]; !ok {
 			sp.logf("registering ref %q for type %s", jt.Ref(), jt.Type())
-			sp.RefJSONTypeMap[jt.Ref()] = jt
+			sp.refJSONTypeMap[jt.Ref()] = jt
 		} else {
 			sp.logf("[warn] type %s redefined to %s", sp.JSONToGoType(pjt, false), sp.JSONToGoType(jt, false))
 		}
