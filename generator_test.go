@@ -282,14 +282,17 @@ import (
     "net/http"
 )
 
+// getSpells is the handler for GET /spells.
 func (a *App) getSpells(w http.ResponseWriter, r *http.Request) (int, []Spell, error) {
     return http.StatusNotImplemented, nil, nil
 }
 
+// postSpells is the handler for POST /spells.
 func (a *App) postSpells(w http.ResponseWriter, r *http.Request, vreq *Spell) (int, *Spell, error) {
     return http.StatusNotImplemented, nil, nil
 }
 
+// getSpellsOne is the handler for GET /spells/{spell-name}.
 func (a *App) getSpellsOne(w http.ResponseWriter, r *http.Request, spellName string) (int, *Spell, error) {
     return http.StatusNotImplemented, nil, nil
 }
@@ -852,6 +855,7 @@ import (
     "net/http"
 )
 
+// getSpellsOne is the handler for GET /spells/{spell-name}.
 func (a *App) getSpellsOne(w http.ResponseWriter, r *http.Request, spellName string) (int, *Spell, error) {
     return http.StatusNotImplemented, nil, nil
 }
@@ -1123,14 +1127,17 @@ import (
 	"net/http"
 )
 
+// getFiles is the handler for GET /files.
 func (a *App) getFiles(w http.ResponseWriter, r *http.Request) (int, []File, error) {
 	return http.StatusNotImplemented, nil, nil
 }
 
+// postFiles is the handler for POST /files.
 func (a *App) postFiles(w http.ResponseWriter, r *http.Request) (int, *File, error) {
 	return http.StatusNotImplemented, nil, nil
 }
 
+// getFilesOne is the handler for GET /files/{file-id}.
 func (a *App) getFilesOne(w http.ResponseWriter, r *http.Request, fileId string) (int, error) {
 	http.Error(w, http.StatusText(http.StatusNotImplemented), http.StatusNotImplemented)
 	return http.StatusNotImplemented, nil
