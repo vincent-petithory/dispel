@@ -438,6 +438,9 @@ func TestTemplateTypesWithImports(t *testing.T) {
                 },
                 "level_on": {
                     "$ref": "#/definitions/spell/definitions/levelon"
+                },
+                "attrs": {
+                    "type": "object"
                 }
             }
         }
@@ -476,6 +479,7 @@ import "time"
 //  * Response body of GET /spells/{spell-name}
 type Spell struct {
     All bool     `+"`"+`json:"all"`+"`"+`
+    Attrs interface{}   `+"`"+`json:"attrs"`+"`"+`
     Element string `+"`"+`json:"element"`+"`"+`
     LevelOn time.Time    `+"`"+`json:"level_on"`+"`"+`
     Name string    `+"`"+`json:"name"`+"`"+`

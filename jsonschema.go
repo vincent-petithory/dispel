@@ -762,11 +762,16 @@ func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
 		if n.TypeName() == "" {
 			log.Panicf("no unnamed type should exist")
 		}
-		// we don't want a type with a slice as underlying type.
-		// See https://golang.org/ref/spec#Assignability
-		a, ok := jt.(JSONArray)
-		if ok {
-			return fmt.Sprintf("[]%s", sp.JSONToGoType(a.Items, false))
+		switch t := jt.(type) {
+		case JSONArray:
+			// we don't want a type with a slice as underlying type.
+			// See https://golang.org/ref/spec#Assignability
+			return fmt.Sprintf("[]%s", sp.JSONToGoType(t.Items, false))
+		case JSONObject:
+			// we don't want types aliased to an interface{}
+			if len(t.Fields) == 0 {
+				return "interface{}"
+			}
 		}
 		return symbolName(n.TypeName())
 	}
@@ -782,6 +787,10 @@ func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
 	case JSONNumber:
 		return "float64"
 	case JSONObject:
+		// if type has no fields, return an interface{}
+		if len(j.Fields) == 0 {
+			return "interface{}"
+		}
 		var buf bytes.Buffer
 		_, _ = buf.WriteString("struct {\n")
 		for _, f := range j.Fields {
@@ -802,8 +811,8 @@ func (sp *SchemaParser) JSONToGoType(jt JSONType, globalScope bool) string {
 		return fmt.Sprintf("[]%s", sp.JSONToGoType(j.Items, false))
 	default:
 		log.Panicf("unhandled jsonType %#v", j)
+		return ""
 	}
-	return ""
 }
 
 // InvalidSchemaRefError represents an error which happens when an invalid $ref is found in a JSON Schema.

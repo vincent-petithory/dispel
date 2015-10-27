@@ -190,11 +190,16 @@ func (t *Template) TypeImports() []string {
 
 // PrintTypeDef returns a string representing a valid Go type definition for j.
 func (t *Template) PrintTypeDef(j JSONType) string {
-	// we don't want type with a slice as underlying type.
-	// See https://golang.org/ref/spec#Assignability
-	_, ok := j.(JSONArray)
-	if ok {
+	switch jt := j.(type) {
+	case JSONArray:
+		// we don't want type with a slice as underlying type.
+		// See https://golang.org/ref/spec#Assignability
 		return ""
+	case JSONObject:
+		// we don't want types aliased to an interface{}
+		if len(jt.Fields) == 0 {
+			return ""
+		}
 	}
 	return fmt.Sprintf("type %s %s", t.ctx.Schema.JSONToGoType(j, false), t.ctx.Schema.JSONToGoType(j, true))
 }
@@ -211,8 +216,8 @@ func (t *Template) TypeNeedsAddr(j JSONType) bool {
 // PrintSmartDerefType returns a pointer to j if j is a JSONObject.
 func (t *Template) PrintSmartDerefType(j JSONType) string {
 	// really smart
-	_, ok := j.(JSONObject)
-	if ok {
+	jo, ok := j.(JSONObject)
+	if ok && len(jo.Fields) > 0 {
 		return "*" + t.ctx.Schema.JSONToGoType(j, false)
 	}
 	return t.ctx.Schema.JSONToGoType(j, false)
