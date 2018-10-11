@@ -1154,23 +1154,24 @@ func (sp *SchemaParser) checkNamedTypeRedefinitions(routes Routes) (map[string][
 			if typ == nil {
 				continue
 			}
-			routes.walkType(typ, func(jt JSONType) {
-				jtn, ok := jt.(JSONTypeNamer)
-				if !ok {
-					return
+			//routes.walkType(typ, func(jt JSONType) {
+			jt := typ
+			jtn, ok := jt.(JSONTypeNamer)
+			if !ok {
+				continue
+			}
+			tn := jtn.TypeName()
+			if fjtn, ok := definitions[tn]; !ok {
+				definitions[tn] = jtn
+				redefinitions[tn] = []JSONTypeNamer{jtn}
+			} else {
+				// it's okay to compare with the string representation of the type.
+				if sp.JSONToGoType(jtn, true) != sp.JSONToGoType(fjtn, true) {
+					redefinitions[tn] = append(redefinitions[tn], jtn)
+					noRedefinitions = false
 				}
-				tn := jtn.TypeName()
-				if fjtn, ok := definitions[tn]; !ok {
-					definitions[tn] = jtn
-					redefinitions[tn] = []JSONTypeNamer{jtn}
-				} else {
-					// it's okay to compare with the string representation of the type.
-					if sp.JSONToGoType(jtn, true) != sp.JSONToGoType(fjtn, true) {
-						redefinitions[tn] = append(redefinitions[tn], jtn)
-						noRedefinitions = false
-					}
-				}
-			})
+			}
+			//})
 		}
 	}
 	if !noRedefinitions {
